@@ -24,7 +24,7 @@ namespace JetRentalOrchestration
     }
 
     // ===================================================================
-    // MEDIATR COMMANDS - Manuel Orchestration Required
+    // MEDIATR COMMANDS - AUTOMATIC ORCHESTRATION WITH PRIORITYFLOW
     // ===================================================================
 
     public class BookJetCommand : IRequest<BookingResult>
@@ -34,7 +34,6 @@ namespace JetRentalOrchestration
         public decimal Amount { get; set; }
     }
 
-    [Priority(Priority.Critical)]  // Payment is CRITICAL priority
     public class ProcessPaymentCommand : IRequest<bool>
     {
         public Guid CustomerId { get; set; }
@@ -42,20 +41,17 @@ namespace JetRentalOrchestration
         public string Reference { get; set; } = string.Empty;
     }
 
-    [Priority(Priority.Normal)]  // Email is NORMAL priority
     public class SendEmailCommand : IRequest<bool>
     {
         public Guid CustomerId { get; set; }
         public Guid BookingId { get; set; }
     }
 
-    [Priority(Priority.Low)]  // Inventory is LOW priority
     public class UpdateInventoryCommand : IRequest<bool>
     {
         public Guid JetId { get; set; }
     }
 
-    [Priority(Priority.Background)]  // Analytics is BACKGROUND priority
     public class LogAnalyticsCommand : IRequest<bool>
     {
         public string EventType { get; set; } = string.Empty;
@@ -86,10 +82,15 @@ namespace JetRentalOrchestration
 
             try
             {
-                // PROBLEM 1: MANUAL ORCHESTRATION
-                // Developer must manually coordinate all steps
 
-                // Step 1: Payment (Should be CRITICAL priority)
+                // Step 1: Create booking record
+                _logger.LogInformation("✈️ Checking jet availability for {JetId}", request.JetId);
+                await Task.Delay(100, cancellationToken); // Simulate availability check
+                
+                _logger.LogInformation("📝 Creating booking record {BookingId}", result.BookingId);
+                await Task.Delay(50, cancellationToken); // Simulate database write
+
+                // Step 2: Payment (Should be CRITICAL priority)
                 _logger.LogInformation("💳 Processing payment...");
                 var paymentSuccess = await _mediator.Send(new ProcessPaymentCommand
                 {
@@ -106,7 +107,7 @@ namespace JetRentalOrchestration
                 }
                 result.Steps.Add("Payment processed");
 
-                // Step 2: Email (Should be NORMAL priority, can wait)
+                // Step 3: Email (Should be NORMAL priority, can wait)
                 _logger.LogInformation("📧 Sending confirmation email...");
                 await _mediator.Send(new SendEmailCommand
                 {
@@ -115,7 +116,7 @@ namespace JetRentalOrchestration
                 }, cancellationToken);
                 result.Steps.Add("Email sent");
 
-                // Step 3: Inventory (Should be LOW priority)
+                // Step 4: Inventory (Should be LOW priority)
                 _logger.LogInformation("📦 Updating inventory...");
                 await _mediator.Send(new UpdateInventoryCommand
                 {
@@ -123,7 +124,7 @@ namespace JetRentalOrchestration
                 }, cancellationToken);
                 result.Steps.Add("Inventory updated");
 
-                // Step 4: Analytics (Should be BACKGROUND priority)
+                // Step 5: Analytics (Should be BACKGROUND priority)
                 _logger.LogInformation("📊 Logging analytics...");
                 await _mediator.Send(new LogAnalyticsCommand
                 {
@@ -245,24 +246,28 @@ namespace JetRentalOrchestration
     {
         static async Task Main(string[] args)
         {
+            Console.WriteLine("🚀 PriorityFlow Demo - Testing Simplified Extensions");
+            Console.WriteLine("====================================================\n");
+            
+            // Test our simplified PriorityFlow extensions
+            await JetRentalOrchestration.TestScenario.PriorityTestRunner.RunPriorityTests();
+            
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.WriteLine("🎯 Original Jet Rental Demo (with PriorityMediatR)");
+            Console.WriteLine(new string('=', 60));
+
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices(services =>
                 {
-                    // Enhanced PriorityFlow MediatR registration
-                    // services.AddMediatR(typeof(Program).Assembly);
+                    // Use our simplified PriorityMediatR instead of standard MediatR
                     services.AddPriorityMediatR(typeof(Program).Assembly);
 
-                    services.AddLogging(builder => builder.AddConsole());
+                    services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
                 })
                 .Build();
 
             var mediator = host.Services.GetRequiredService<IMediator>();
             var logger = host.Services.GetRequiredService<ILogger<Program>>();
-
-            logger.LogInformation("========================================");
-            logger.LogInformation("🚁 JET RENTAL ORCHESTRATION DEMO");
-            logger.LogInformation("🚀 ENHANCED PRIORITYFLOW MEDIATR");
-            logger.LogInformation("========================================");
 
             // Simulate jet booking request
             var bookingCommand = new BookJetCommand
@@ -272,7 +277,7 @@ namespace JetRentalOrchestration
                 Amount = 25000m
             };
 
-            // Execute booking with enhanced PriorityFlow MediatR
+            // Execute booking with PriorityMediatR
             var overallStart = DateTime.UtcNow;
             
             // Add timeout to prevent hanging
@@ -284,9 +289,6 @@ namespace JetRentalOrchestration
                 var overallEnd = DateTime.UtcNow;
 
                 // Display results
-                logger.LogInformation("========================================");
-                logger.LogInformation("📊 ENHANCED PRIORITYFLOW RESULTS");
-                logger.LogInformation("========================================");
                 logger.LogInformation("Success: {Success}", result.Success);
                 logger.LogInformation("Message: {Message}", result.Message);
                 logger.LogInformation("Total Processing Time: {Time}ms", (overallEnd - overallStart).TotalMilliseconds);
@@ -296,17 +298,6 @@ namespace JetRentalOrchestration
                 {
                     logger.LogInformation("  ✅ {Step}", step);
                 }
-
-                logger.LogInformation("\n========================================");
-                logger.LogInformation("🚀 PRIORITYFLOW MEDIATR BENEFITS:");
-                logger.LogInformation("========================================");
-                logger.LogInformation("1. ✅ PRIORITY-BASED EXECUTION - Critical tasks first");
-                logger.LogInformation("2. ✅ BACKGROUND PROCESSING - Non-blocking execution");
-                logger.LogInformation("3. ✅ AUTOMATIC ORCHESTRATION - Zero code changes");
-                logger.LogInformation("4. ✅ ENHANCED MONITORING - Rich logging & metrics");
-                logger.LogInformation("5. ✅ SCALABLE ARCHITECTURE - Queue-based processing");
-                logger.LogInformation("6. ✅ CENTRALIZED ERROR HANDLING - Consistent patterns");
-                logger.LogInformation("7. ✅ DECLARATIVE WORKFLOW - Attribute-based priorities");
             }
             catch (OperationCanceledException)
             {

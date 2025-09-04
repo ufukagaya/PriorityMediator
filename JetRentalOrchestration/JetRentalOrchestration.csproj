@@ -5,6 +5,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+		<StartupObject>JetRentalOrchestration.BankingProgram</StartupObject>
 	</PropertyGroup>
 
 	<ItemGroup>

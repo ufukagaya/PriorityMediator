@@ -1,5 +1,5 @@
 ﻿// Extensions/PriorityFlow/PriorityMediator.cs  
-// Bu dosyayı Visual Studio'da Extensions/PriorityFlow klasörüne oluştur
+// Simplified Developer-Friendly Priority MediatR Wrapper
 
 using System;
 using System.Collections.Generic;
@@ -14,276 +14,262 @@ using Microsoft.Extensions.Logging;
 namespace JetRentalOrchestration.Extensions.PriorityFlow
 {
     /// <summary>
-    /// Priority-aware MediatR wrapper
-    /// IMediator interface'ini implement eder ama priority + orchestration ekler
-    /// Existing kod değişmeden çalışır, ama enhanced özellikler sağlar
+    /// Simple priority-aware MediatR wrapper
+    /// - MediatR compatible (drop-in replacement)
+    /// - In-process priority queue (no background threads)
+    /// - Easy debugging and testing
+    /// - Clear error messages
     /// </summary>
-    public class PriorityMediator : IMediator, IDisposable
+    public class PriorityMediator : IMediator
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IMediator _innerMediator;
         private readonly ILogger<PriorityMediator> _logger;
-        private readonly Lazy<WorkflowOrchestrator> _orchestrator;
-        private readonly Lazy<IMediator> _innerMediator;
-        
-        // Thread-local flag to detect recursive calls
-        private static readonly ThreadLocal<bool> _isProcessingInOrchestrator = new ThreadLocal<bool>(() => false);
-        
-        /// <summary>
-        /// Set processing flag - used by WorkflowOrchestrator to indicate we're in execution context
-        /// </summary>
-        internal static IDisposable SetProcessingContext()
-        {
-            _isProcessingInOrchestrator.Value = true;
-            return new ProcessingContext();
-        }
-        
-        private class ProcessingContext : IDisposable
-        {
-            public void Dispose()
-            {
-                _isProcessingInOrchestrator.Value = false;
-            }
-        }
+        private readonly List<PriorityCommandItem> _commandQueue = new();
+        private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
 
         public PriorityMediator(IServiceProvider serviceProvider, ILogger<PriorityMediator> logger)
         {
-            _serviceProvider = serviceProvider;
+            // Get the original MediatR instance (registered as Mediator concrete type)
+            _innerMediator = serviceProvider.GetRequiredService<Mediator>();
             _logger = logger;
-
-            // Lazy initialization - sadece gerektiğinde oluştur
-            _innerMediator = new Lazy<IMediator>(() => CreateInnerMediator());
-            _orchestrator = new Lazy<WorkflowOrchestrator>(() => CreateOrchestrator());
-
-            _logger.LogInformation("🚀 PriorityMediator initialized - ready for enhanced MediatR processing");
         }
 
         /// <summary>
-        /// Ana Send method - priority + orchestration ile enhanced
-        /// CRITICAL: Recursive calls'ı detect eder ve inner mediator'a yönlendirir
+        /// Send with priority support - main entry point
         /// </summary>
         public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            // DEADLOCK PREVENTION: If we're already processing in orchestrator, use inner mediator
-            if (_isProcessingInOrchestrator.Value)
-            {
-                _logger.LogDebug("🔄 Recursive call detected - using inner mediator for {CommandType}", request.GetType().Name);
-                return await _innerMediator.Value.Send(request, cancellationToken);
-            }
-
-            // Priority attribute kontrolü
             var priority = GetCommandPriority(request);
-            _logger.LogInformation("📨 Sending {CommandType} with priority {Priority}",
-                request.GetType().Name, priority);
+            var commandType = request.GetType().Name;
+
+            #if DEBUG
+            _logger.LogInformation("🎯 Executing {CommandType} with Priority.{Priority}", commandType, priority);
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            #endif
 
             try
             {
-                // Orchestrator ile priority-aware execution
-                var result = await _orchestrator.Value.ExecuteWithOrchestrationAsync(request, cancellationToken);
+                TResponse result;
 
-                _logger.LogInformation("✅ {CommandType} completed successfully", request.GetType().Name);
+                // If no other commands are queued, execute directly
+                if (!HasQueuedCommands())
+                {
+                    result = await _innerMediator.Send(request, cancellationToken);
+                }
+                else
+                {
+                    // Add to priority queue and process in order
+                    result = await ExecuteWithPriorityQueue(request, priority, cancellationToken);
+                }
+
+                #if DEBUG
+                stopwatch.Stop();
+                _logger.LogInformation("✅ {CommandType} completed in {ElapsedMs}ms", commandType, stopwatch.ElapsedMilliseconds);
+                #endif
+
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ {CommandType} failed", request.GetType().Name);
+                _logger.LogError(ex, "❌ {CommandType} failed: {ErrorMessage}", commandType, ex.Message);
+                
+                // Provide helpful error messages for common issues
+                if (ex.Message.Contains("No service for type"))
+                {
+                    throw new PriorityMediatRException(
+                        $"Handler not found for {commandType}. " +
+                        $"Make sure you registered the handler: " +
+                        $"services.AddScoped<IRequestHandler<{commandType}, {typeof(TResponse).Name}>, YourHandler>();", 
+                        ex);
+                }
+                
                 throw;
             }
         }
 
         /// <summary>
-        /// Non-generic Send method - MediatR compatibility
+        /// Non-generic Send method for MediatR compatibility
         /// </summary>
         public async Task<object?> Send(object request, CancellationToken cancellationToken = default)
         {
-            if (request is IRequest baseRequest)
-            {
-                _logger.LogInformation("📨 Sending non-generic {CommandType}", request.GetType().Name);
-
-                try
-                {
-                    // Generic type'ı bulup orchestrator'a forward et
-                    var commandType = request.GetType();
-                    var responseType = GetResponseType(commandType);
-
-                    if (responseType != null)
-                    {
-                        // IRequest<T> - generic Send methodunu call et
-                        var method = typeof(WorkflowOrchestrator).GetMethod(nameof(WorkflowOrchestrator.ExecuteWithOrchestrationAsync));
-                        var genericMethod = method!.MakeGenericMethod(responseType);
-
-                        var task = (Task)genericMethod.Invoke(_orchestrator.Value, new object[] { request, cancellationToken })!;
-                        await task;
-
-                        var resultProperty = task.GetType().GetProperty("Result");
-                        return resultProperty?.GetValue(task);
-                    }
-                    else
-                    {
-                        // IRequest (no response) - direct execution
-                        await _innerMediator.Value.Send(request, cancellationToken);
-                        return null;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "❌ Non-generic {CommandType} failed", request.GetType().Name);
-                    throw;
-                }
-            }
-
-            // Fallback - direct MediatR
-            return await _innerMediator.Value.Send(request, cancellationToken);
+            // For non-generic calls, delegate to the inner mediator
+            // This keeps the implementation simple and avoids complex reflection
+            return await _innerMediator.Send(request, cancellationToken);
         }
 
         /// <summary>
-        /// Publish method - event publishing (direct passthrough to MediatR)
-        /// Priority sadece command'lar için, event'ler için değil
-        /// </summary>
-        public Task Publish(object notification, CancellationToken cancellationToken = default)
-        {
-            _logger.LogDebug("📢 Publishing {NotificationType}", notification.GetType().Name);
-            return _innerMediator.Value.Publish(notification, cancellationToken);
-        }
-
-        /// <summary>
-        /// Generic Publish method - event publishing
-        /// </summary>
-        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
-            where TNotification : INotification
-        {
-            _logger.LogDebug("📢 Publishing {NotificationType}", typeof(TNotification).Name);
-            return _innerMediator.Value.Publish(notification, cancellationToken);
-        }
-
-        // ===================================================================
-        // ISender INTERFACE IMPLEMENTATION - MediatR 12.x Compatibility
-        // ===================================================================
-
-        /// <summary>
-        /// ISender.Send - Void command implementation (IRequest without response)
+        /// Void command Send method
         /// </summary>
         public async Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default)
             where TRequest : IRequest
         {
-            _logger.LogInformation("📨 Sending void command {CommandType}", typeof(TRequest).Name);
+            var priority = GetCommandPriority(request);
+            var commandType = request.GetType().Name;
+
+            #if DEBUG
+            _logger.LogInformation("🎯 Executing void command {CommandType} with Priority.{Priority}", commandType, priority);
+            #endif
 
             try
             {
-                // Void command'ı inner MediatR'a delegate et
-                await _innerMediator.Value.Send(request, cancellationToken);
-                _logger.LogInformation("✅ Void command {CommandType} completed", typeof(TRequest).Name);
+                // For void commands, always execute directly (simpler)
+                await _innerMediator.Send(request, cancellationToken);
+                
+                #if DEBUG
+                _logger.LogInformation("✅ Void command {CommandType} completed", commandType);
+                #endif
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Void command {CommandType} failed", typeof(TRequest).Name);
+                _logger.LogError(ex, "❌ Void command {CommandType} failed", commandType);
                 throw;
             }
         }
 
         /// <summary>
-        /// CreateStream method - MediatR 12.x streaming support
+        /// Publish method - direct passthrough to MediatR
+        /// Events don't need priority handling
+        /// </summary>
+        public Task Publish(object notification, CancellationToken cancellationToken = default)
+        {
+            return _innerMediator.Publish(notification, cancellationToken);
+        }
+
+        /// <summary>
+        /// Generic Publish method
+        /// </summary>
+        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+            where TNotification : INotification
+        {
+            return _innerMediator.Publish(notification, cancellationToken);
+        }
+
+        /// <summary>
+        /// Streaming support - delegate to inner mediator
         /// </summary>
         public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("🌊 Creating stream for {RequestType}", request.GetType().Name);
-
-            // Streaming işlemlerini inner MediatR'a delegate et
-            if (_innerMediator.Value is ISender sender)
-            {
-                return sender.CreateStream(request, cancellationToken);
-            }
-
-            // Fallback - empty stream
-            return AsyncEnumerableEmpty<TResponse>();
+            return _innerMediator.CreateStream(request, cancellationToken);
         }
 
         /// <summary>
-        /// Non-generic CreateStream method
+        /// Non-generic streaming support
         /// </summary>
         public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("🌊 Creating non-generic stream for {RequestType}", request.GetType().Name);
-
-            // Streaming işlemlerini inner MediatR'a delegate et
-            if (_innerMediator.Value is ISender sender)
-            {
-                return sender.CreateStream(request, cancellationToken);
-            }
-
-            // Fallback - empty stream
-            return AsyncEnumerableEmpty<object?>();
+            return _innerMediator.CreateStream(request, cancellationToken);
         }
 
+        // ===================================================================
+        // PRIVATE HELPER METHODS
+        // ===================================================================
+
         /// <summary>
-        /// Helper method - empty async enumerable oluştur
+        /// Execute command with priority queue (single-threaded, predictable)
         /// </summary>
-        private static async IAsyncEnumerable<T> AsyncEnumerableEmpty<T>()
+        private async Task<TResponse> ExecuteWithPriorityQueue<TResponse>(IRequest<TResponse> request, Priority priority, CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            yield break;
+            await _queueSemaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                // Add current command to queue
+                var queueItem = new PriorityCommandItem
+                {
+                    Command = request,
+                    Priority = priority,
+                    QueuedAt = DateTime.UtcNow
+                };
+
+                _commandQueue.Add(queueItem);
+
+                // Sort by priority (High -> Normal -> Low) then by QueuedAt
+                _commandQueue.Sort((x, y) =>
+                {
+                    var priorityComparison = y.Priority.CompareTo(x.Priority); // Descending priority
+                    return priorityComparison != 0 ? priorityComparison : x.QueuedAt.CompareTo(y.QueuedAt); // Ascending time
+                });
+
+                // Process all commands in priority order
+                TResponse result = default!;
+                var processedItems = new List<PriorityCommandItem>();
+
+                foreach (var item in _commandQueue)
+                {
+                    if (ReferenceEquals(item.Command, request))
+                    {
+                        // This is our command
+                        result = await _innerMediator.Send((IRequest<TResponse>)item.Command, cancellationToken);
+                    }
+                    else
+                    {
+                        // Other command - execute it too (fire and forget for void commands)
+                        try
+                        {
+                            await _innerMediator.Send(item.Command, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "⚠️ Queued command {CommandType} failed", item.CommandType);
+                            // Don't let other command failures affect our result
+                        }
+                    }
+
+                    processedItems.Add(item);
+                }
+
+                // Remove processed items
+                foreach (var item in processedItems)
+                {
+                    _commandQueue.Remove(item);
+                }
+
+                return result;
+            }
+            finally
+            {
+                _queueSemaphore.Release();
+            }
         }
 
         /// <summary>
-        /// Command'ın priority'sini attribute'dan oku
+        /// Check if there are queued commands waiting
+        /// </summary>
+        private bool HasQueuedCommands()
+        {
+            return _commandQueue.Count > 0;
+        }
+
+        /// <summary>
+        /// Get priority for a command using attribute and conventions
         /// </summary>
         private Priority GetCommandPriority(object command)
         {
+            // 1. Check for explicit Priority attribute
             var attribute = command.GetType().GetCustomAttribute<PriorityAttribute>();
-            var priority = attribute?.Priority ?? Priority.Normal;
-
-            _logger.LogDebug("🏷️ {CommandType} priority: {Priority}", command.GetType().Name, priority);
-            return priority;
-        }
-
-        /// <summary>
-        /// Command'ın response type'ını bul (IRequest<T>'deki T)
-        /// </summary>
-        private Type? GetResponseType(Type commandType)
-        {
-            var requestInterface = commandType.GetInterfaces()
-                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequest<>));
-
-            return requestInterface?.GetGenericArguments().FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Inner MediatR instance'ı oluştur
-        /// ServiceProvider'dan original MediatR'ı al (circular dependency'yi önle)
-        /// </summary>
-        private IMediator CreateInnerMediator()
-        {
-            _logger.LogDebug("🔧 Creating inner MediatR instance...");
-
-            // ServiceProvider'dan original Mediator instance'ı al (not IMediator interface)
-            var originalMediator = _serviceProvider.GetRequiredService<Mediator>();
-
-            return originalMediator;
-        }
-
-        /// <summary>
-        /// WorkflowOrchestrator instance'ı oluştur
-        /// </summary>
-        private WorkflowOrchestrator CreateOrchestrator()
-        {
-            _logger.LogDebug("🔧 Creating WorkflowOrchestrator...");
-
-            var orchestratorLogger = _serviceProvider.GetRequiredService<ILogger<WorkflowOrchestrator>>();
-            return new WorkflowOrchestrator(_innerMediator.Value, orchestratorLogger);
-        }
-
-        /// <summary>
-        /// Cleanup - orchestrator'ı dispose et
-        /// </summary>
-        public void Dispose()
-        {
-            _logger.LogInformation("🛑 Disposing PriorityMediator...");
-
-            if (_orchestrator.IsValueCreated)
+            if (attribute != null)
             {
-                _orchestrator.Value.Dispose();
+                return attribute.Priority;
             }
 
-            _logger.LogInformation("✅ PriorityMediator disposed");
+            // 2. Check naming conventions (safe patterns only)
+            var conventionPriority = PriorityConventions.GetConventionBasedPriority(command.GetType());
+            if (conventionPriority != Priority.Normal)
+            {
+                return conventionPriority;
+            }
+
+            // 3. Default to Normal
+            return Priority.Normal;
         }
+    }
+
+    /// <summary>
+    /// Custom exception for PriorityMediatR with helpful messages
+    /// </summary>
+    public class PriorityMediatRException : Exception
+    {
+        public PriorityMediatRException(string message) : base(message) { }
+        public PriorityMediatRException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

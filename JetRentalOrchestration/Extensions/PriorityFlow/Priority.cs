@@ -1,29 +1,72 @@
 ﻿// Extensions/PriorityFlow/Priority.cs
-// Bu dosyayı Visual Studio'da Extensions/PriorityFlow klasörüne oluştur
+// Simplified Priority System - Developer Experience Focused
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.ComponentModel;
 using MediatR;
 
 namespace JetRentalOrchestration.Extensions.PriorityFlow
 {
     /// <summary>
-    /// Command execution priority levels
-    /// Yüksek sayı = Yüksek priority (Critical = 10, Background = 1)
+    /// Simple 3-level priority system for developer clarity
+    /// Higher number = Higher priority
     /// </summary>
     public enum Priority
     {
-        Background = 1,  // En düşük priority - sistem boştayken çalışır
-        Low = 3,         // Düşük priority - normal işlemlerden sonra
-        Normal = 5,      // Normal priority - default değer
-        High = 7,        // Yüksek priority - önemli işlemler
-        Critical = 10    // En yüksek priority - acil işlemler
+        [Description("Background operations, reports, analytics")]
+        Low = 1,
+
+        [Description("Standard business operations")]
+        Normal = 2,
+
+        [Description("Time-critical operations like payments, security")]
+        High = 3
     }
 
     /// <summary>
-    /// Command class'larına priority vermek için attribute
-    /// Kullanım: [Priority(Priority.High)]
+    /// Safe convention-based priority detection
+    /// Only obvious cases to avoid naming conflicts
+    /// </summary>
+    public static class PriorityConventions
+    {
+        private static readonly Dictionary<string, Priority> _safeConventions = new()
+        {
+            // Very obvious high priority cases
+            { "payment", Priority.High },
+            { "security", Priority.High },
+            { "auth", Priority.High },
+            
+            // Very obvious low priority cases  
+            { "report", Priority.Low },
+            { "analytics", Priority.Low },
+            { "log", Priority.Low }
+        };
+
+        /// <summary>
+        /// Get priority based on command name conventions
+        /// Uses exact prefix matching to avoid conflicts
+        /// </summary>
+        public static Priority GetConventionBasedPriority(Type commandType)
+        {
+            var commandName = commandType.Name.ToLower();
+            
+            // Only check for exact prefix matches to avoid conflicts
+            foreach (var convention in _safeConventions)
+            {
+                if (commandName.StartsWith(convention.Key))
+                {
+                    return convention.Value;
+                }
+            }
+            
+            return Priority.Normal; // Safe default
+        }
+    }
+
+    /// <summary>
+    /// Developer-friendly priority attribute
+    /// Usage: [Priority(Priority.High)]
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public class PriorityAttribute : Attribute
@@ -37,30 +80,14 @@ namespace JetRentalOrchestration.Extensions.PriorityFlow
     }
 
     /// <summary>
-    /// Auto-orchestration için interface
-    /// Command execute edildikten sonra hangi command'ların çalışacağını belirler
+    /// Simple command wrapper for priority queue
+    /// No complex orchestration, just basic priority handling
     /// </summary>
-    public interface IWorkflowCommand<T> : IRequest<T>
+    internal class PriorityCommandItem
     {
-        /// <summary>
-        /// Ana command çalıştıktan sonra otomatik olarak çalıştırılacak command'ları return et
-        /// Bu method'un return ettiği command'lar priority sırasıyla otomatik execute edilir
-        /// </summary>
-        /// <param name="result">Ana command'ın result'ı</param>
-        /// <returns>Otomatik çalıştırılacak command'lar</returns>
-        IEnumerable<IBaseRequest> GetFollowUpCommands(T result);
-    }
-
-    /// <summary>
-    /// Priority queue için item wrapper
-    /// Her queue item'ı command + priority + timing info taşır
-    /// </summary>
-    public class PriorityQueueItem
-    {
-        public IBaseRequest Command { get; set; } = null!; // IBaseRequest hem IRequest hem IRequest<T>'yi kapsar
+        public object Command { get; set; } = null!;
         public Priority Priority { get; set; }
         public DateTime QueuedAt { get; set; }
-        public TaskCompletionSource<object> CompletionSource { get; set; } = null!;
         public string CommandType => Command.GetType().Name;
     }
 }

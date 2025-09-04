@@ -1835,11 +1835,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Ufuk\\source\\repos\\PriorityFlowDemo\\JetRentalOrchestration\\JetRentalOrchestration.csproj",
+      "projectUniqueName": "C:\\Users\\Ufuk\\Desktop\\PriorityFlowDemo\\JetRentalOrchestration\\JetRentalOrchestration.csproj",
       "projectName": "JetRentalOrchestration",
-      "projectPath": "C:\\Users\\Ufuk\\source\\repos\\PriorityFlowDemo\\JetRentalOrchestration\\JetRentalOrchestration.csproj",
+      "projectPath": "C:\\Users\\Ufuk\\Desktop\\PriorityFlowDemo\\JetRentalOrchestration\\JetRentalOrchestration.csproj",
       "packagesPath": "C:\\Users\\Ufuk\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Ufuk\\source\\repos\\PriorityFlowDemo\\JetRentalOrchestration\\obj\\",
+      "outputPath": "C:\\Users\\Ufuk\\Desktop\\PriorityFlowDemo\\JetRentalOrchestration\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

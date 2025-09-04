@@ -1,0 +1,13 @@
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.csproj.AssemblyReference.cache
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.AssemblyInfoInputs.cache
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.AssemblyInfo.cs
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.csproj.CoreCompileInputs.cache
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.sourcelink.json
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.deps.json
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.dll
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.pdb
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.dll
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\refint\PriorityFlow.Core.dll
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.pdb
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\ref\PriorityFlow.Core.dll
