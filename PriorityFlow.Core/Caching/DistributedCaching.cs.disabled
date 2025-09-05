@@ -1,0 +1,433 @@
+// PriorityFlow.Core.Caching - Distributed Caching Support
+// Enterprise-grade caching with Redis, SQL Server, and in-memory support
+
+using System;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using PriorityFlow.Configuration;
+
+namespace PriorityFlow.Caching
+{
+    /// <summary>
+    /// Priority-aware caching interface
+    /// </summary>
+    public interface IPriorityCache
+    {
+        /// <summary>
+        /// Get cached value by key
+        /// </summary>
+        Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Set cached value with priority-aware expiration
+        /// </summary>
+        Task SetAsync<T>(string key, T value, Priority priority, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Set cached value with custom expiration
+        /// </summary>
+        Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Remove cached value
+        /// </summary>
+        Task RemoveAsync(string key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Check if key exists in cache
+        /// </summary>
+        Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get cache statistics
+        /// </summary>
+        Task<CacheStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
+    /// Distributed cache implementation with priority support
+    /// </summary>
+    public class PriorityDistributedCache : IPriorityCache
+    {
+        private readonly IDistributedCache _distributedCache;
+        private readonly CachingOptions _options;
+        private readonly ILogger<PriorityDistributedCache> _logger;
+        private readonly CacheStatistics _statistics = new();
+
+        public PriorityDistributedCache(
+            IDistributedCache distributedCache,
+            CachingOptions options,
+            ILogger<PriorityDistributedCache> logger)
+        {
+            _distributedCache = distributedCache;
+            _options = options;
+            _logger = logger;
+        }
+
+        public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var cacheKey = GenerateCacheKey(key);
+                var cached = await _distributedCache.GetStringAsync(cacheKey, cancellationToken);
+                
+                if (cached == null)
+                {
+                    _statistics.RecordMiss();
+                    _logger.LogDebug("🔍 CACHE MISS: {Key}", cacheKey);
+                    return default;
+                }
+
+                var result = JsonSerializer.Deserialize<T>(cached);
+                _statistics.RecordHit();
+                _logger.LogDebug("🎯 CACHE HIT: {Key}", cacheKey);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ CACHE GET ERROR: {Key}", key);
+                return default;
+            }
+        }
+
+        public async Task SetAsync<T>(string key, T value, Priority priority, CancellationToken cancellationToken = default)
+        {
+            var expiration = GetExpirationForPriority(priority);
+            await SetAsync(key, value, expiration, cancellationToken);
+        }
+
+        public async Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var cacheKey = GenerateCacheKey(key);
+                var serialized = JsonSerializer.Serialize(value);
+                
+                var options = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = expiration
+                };
+
+                await _distributedCache.SetStringAsync(cacheKey, serialized, options, cancellationToken);
+                
+                _statistics.RecordSet();
+                _logger.LogDebug("💾 CACHE SET: {Key} (expires in {Expiration})", cacheKey, expiration);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ CACHE SET ERROR: {Key}", key);
+                // Don't throw - caching failures should not break the application
+            }
+        }
+
+        public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var cacheKey = GenerateCacheKey(key);
+                await _distributedCache.RemoveAsync(cacheKey, cancellationToken);
+                
+                _statistics.RecordRemove();
+                _logger.LogDebug("🗑️ CACHE REMOVE: {Key}", cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ CACHE REMOVE ERROR: {Key}", key);
+            }
+        }
+
+        public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var cacheKey = GenerateCacheKey(key);
+                var value = await _distributedCache.GetAsync(cacheKey, cancellationToken);
+                return value != null;
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ CACHE EXISTS ERROR: {Key}", key);
+                return false;
+            }
+        }
+
+        public Task<CacheStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_statistics);
+        }
+
+        private string GenerateCacheKey(string key)
+        {
+            return $"{_options.KeyPrefix}:{key}";
+        }
+
+        private TimeSpan GetExpirationForPriority(Priority priority)
+        {
+            if (_options.ExpiryByPriority.TryGetValue(priority, out var minutes))
+            {
+                return TimeSpan.FromMinutes(minutes);
+            }
+
+            return TimeSpan.FromMinutes(_options.DefaultExpiryMinutes);
+        }
+    }
+
+    /// <summary>
+    /// Hybrid cache implementation (Memory + Distributed)
+    /// </summary>
+    public class PriorityHybridCache : IPriorityCache
+    {
+        private readonly IMemoryCache _memoryCache;
+        private readonly IPriorityCache _distributedCache;
+        private readonly CachingOptions _options;
+        private readonly ILogger<PriorityHybridCache> _logger;
+        private readonly CacheStatistics _statistics = new();
+
+        public PriorityHybridCache(
+            IMemoryCache memoryCache,
+            IPriorityCache distributedCache,
+            CachingOptions options,
+            ILogger<PriorityHybridCache> logger)
+        {
+            _memoryCache = memoryCache;
+            _distributedCache = distributedCache;
+            _options = options;
+            _logger = logger;
+        }
+
+        public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Try L1 cache (Memory) first
+                if (_memoryCache.TryGetValue(key, out T? memoryCached))
+                {
+                    _statistics.RecordHit();
+                    _logger.LogDebug("🚀 L1 CACHE HIT: {Key}", key);
+                    return memoryCached;
+                }
+
+                // Try L2 cache (Distributed)
+                var distributedCached = await _distributedCache.GetAsync<T>(key, cancellationToken);
+                if (distributedCached != null)
+                {
+                    // Promote to L1 cache
+                    var memoryExpiration = TimeSpan.FromMinutes(Math.Min(5, _options.DefaultExpiryMinutes));
+                    _memoryCache.Set(key, distributedCached, memoryExpiration);
+                    
+                    _statistics.RecordHit();
+                    _logger.LogDebug("💾 L2 CACHE HIT (promoted to L1): {Key}", key);
+                    return distributedCached;
+                }
+
+                _statistics.RecordMiss();
+                _logger.LogDebug("🔍 CACHE MISS (both L1 and L2): {Key}", key);
+                return default;
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ HYBRID CACHE GET ERROR: {Key}", key);
+                return default;
+            }
+        }
+
+        public async Task SetAsync<T>(string key, T value, Priority priority, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var expiration = GetExpirationForPriority(priority);
+                
+                // Set in L1 cache (Memory) for fast access
+                var memoryExpiration = TimeSpan.FromMinutes(Math.Min(5, expiration.TotalMinutes));
+                _memoryCache.Set(key, value, memoryExpiration);
+                
+                // Set in L2 cache (Distributed) for persistence
+                await _distributedCache.SetAsync(key, value, expiration, cancellationToken);
+                
+                _statistics.RecordSet();
+                _logger.LogDebug("💾 HYBRID CACHE SET: {Key} (L1: {L1Expiry}, L2: {L2Expiry})", 
+                    key, memoryExpiration, expiration);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ HYBRID CACHE SET ERROR: {Key}", key);
+            }
+        }
+
+        public async Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Set in L1 cache (Memory)
+                var memoryExpiration = TimeSpan.FromMinutes(Math.Min(5, expiration.TotalMinutes));
+                _memoryCache.Set(key, value, memoryExpiration);
+                
+                // Set in L2 cache (Distributed)
+                await _distributedCache.SetAsync(key, value, expiration, cancellationToken);
+                
+                _statistics.RecordSet();
+                _logger.LogDebug("💾 HYBRID CACHE SET: {Key} (custom expiry: {Expiration})", key, expiration);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ HYBRID CACHE SET ERROR: {Key}", key);
+            }
+        }
+
+        public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Remove from L1 cache
+                _memoryCache.Remove(key);
+                
+                // Remove from L2 cache
+                await _distributedCache.RemoveAsync(key, cancellationToken);
+                
+                _statistics.RecordRemove();
+                _logger.LogDebug("🗑️ HYBRID CACHE REMOVE: {Key}", key);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ HYBRID CACHE REMOVE ERROR: {Key}", key);
+            }
+        }
+
+        public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Check L1 cache first
+                if (_memoryCache.TryGetValue(key, out _))
+                {
+                    return true;
+                }
+
+                // Check L2 cache
+                return await _distributedCache.ExistsAsync(key, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _statistics.RecordError();
+                _logger.LogError(ex, "❌ HYBRID CACHE EXISTS ERROR: {Key}", key);
+                return false;
+            }
+        }
+
+        public async Task<CacheStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default)
+        {
+            var distributedStats = await _distributedCache.GetStatisticsAsync(cancellationToken);
+            
+            return new CacheStatistics
+            {
+                Hits = _statistics.Hits + distributedStats.Hits,
+                Misses = _statistics.Misses + distributedStats.Misses,
+                Sets = _statistics.Sets + distributedStats.Sets,
+                Removes = _statistics.Removes + distributedStats.Removes,
+                Errors = _statistics.Errors + distributedStats.Errors
+            };
+        }
+
+        private TimeSpan GetExpirationForPriority(Priority priority)
+        {
+            if (_options.ExpiryByPriority.TryGetValue(priority, out var minutes))
+            {
+                return TimeSpan.FromMinutes(minutes);
+            }
+
+            return TimeSpan.FromMinutes(_options.DefaultExpiryMinutes);
+        }
+    }
+
+    /// <summary>
+    /// Cache statistics for monitoring
+    /// </summary>
+    public class CacheStatistics
+    {
+        private long _hits;
+        private long _misses;
+        private long _sets;
+        private long _removes;
+        private long _errors;
+
+        public long Hits => _hits;
+        public long Misses => _misses;
+        public long Sets => _sets;
+        public long Removes => _removes;
+        public long Errors => _errors;
+
+        public double HitRatio => (_hits + _misses) > 0 ? (double)_hits / (_hits + _misses) : 0;
+        public long TotalRequests => _hits + _misses;
+
+        public void RecordHit() => Interlocked.Increment(ref _hits);
+        public void RecordMiss() => Interlocked.Increment(ref _misses);
+        public void RecordSet() => Interlocked.Increment(ref _sets);
+        public void RecordRemove() => Interlocked.Increment(ref _removes);
+        public void RecordError() => Interlocked.Increment(ref _errors);
+
+        public void Reset()
+        {
+            Interlocked.Exchange(ref _hits, 0);
+            Interlocked.Exchange(ref _misses, 0);
+            Interlocked.Exchange(ref _sets, 0);
+            Interlocked.Exchange(ref _removes, 0);
+            Interlocked.Exchange(ref _errors, 0);
+        }
+    }
+
+    /// <summary>
+    /// Cache key generator with naming conventions
+    /// </summary>
+    public static class CacheKeyGenerator
+    {
+        /// <summary>
+        /// Generate cache key for command result
+        /// </summary>
+        public static string ForCommand<TCommand>(TCommand command) where TCommand : class
+        {
+            var commandType = typeof(TCommand).Name;
+            var hash = command.GetHashCode().ToString("X");
+            return $"cmd:{commandType}:{hash}";
+        }
+
+        /// <summary>
+        /// Generate cache key for query result
+        /// </summary>
+        public static string ForQuery<TQuery, TResult>(TQuery query) where TQuery : class
+        {
+            var queryType = typeof(TQuery).Name;
+            var resultType = typeof(TResult).Name;
+            var hash = query.GetHashCode().ToString("X");
+            return $"qry:{queryType}:{resultType}:{hash}";
+        }
+
+        /// <summary>
+        /// Generate cache key with custom prefix
+        /// </summary>
+        public static string WithPrefix(string prefix, params string[] parts)
+        {
+            return $"{prefix}:{string.Join(":", parts)}";
+        }
+
+        /// <summary>
+        /// Generate time-based cache key (useful for time-sensitive data)
+        /// </summary>
+        public static string WithTimeWindow(string baseKey, TimeSpan window)
+        {
+            var windowTicks = (DateTime.UtcNow.Ticks / window.Ticks) * window.Ticks;
+            return $"{baseKey}:tw:{windowTicks}";
+        }
+    }
+}

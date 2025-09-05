@@ -16,11 +16,15 @@
       - Fluent configuration API
       - Developer-friendly debugging</releaseNotes>
     <tags>mediatr cqrs priority command query pattern</tags>
-    <repository type="git" url="https://github.com/your-org/priorityflow" commit="21a61303f8ea3ece24baddfc0fd5169476011820" />
+    <repository type="git" url="https://github.com/your-org/priorityflow" commit="f893bd0c9d2576ef8debf171bd6ce7d22a6a14b0" />
     <dependencies>
       <group targetFramework="net8.0">
+        <dependency id="Microsoft.Extensions.Caching.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Caching.Memory" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Configuration.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.DependencyInjection" version="8.0.0" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging" version="8.0.0" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.Logging.Abstractions" version="8.0.0" exclude="Build,Analyzers" />
       </group>

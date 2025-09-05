@@ -102,7 +102,7 @@ namespace PriorityFlow
     public delegate Task RequestHandlerDelegate();
 
     /// <summary>
-    /// Delegate representing the continuation of the request handling pipeline with response
+    /// Delegate representing the continuation of the request handling pipeline with response  
     /// </summary>
     /// <typeparam name="TResponse">Response type</typeparam>
     public delegate Task<TResponse> RequestHandlerDelegate<TResponse>();

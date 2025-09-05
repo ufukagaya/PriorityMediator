@@ -1,0 +1,531 @@
+// PriorityFlow.Core.Configuration - Advanced Configuration System
+// Enterprise-grade configuration with hot-reload and validation
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace PriorityFlow.Configuration
+{
+    /// <summary>
+    /// Advanced PriorityFlow configuration with enterprise features
+    /// </summary>
+    public class AdvancedPriorityFlowConfiguration : PriorityFlowConfiguration
+    {
+        /// <summary>
+        /// Circuit breaker configuration
+        /// </summary>
+        public CircuitBreakerOptions CircuitBreaker { get; set; } = new();
+
+        /// <summary>
+        /// Retry policy configuration  
+        /// </summary>
+        public RetryPolicyOptions RetryPolicy { get; set; } = new();
+
+        /// <summary>
+        /// Caching configuration
+        /// </summary>
+        public CachingOptions Caching { get; set; } = new();
+
+        /// <summary>
+        /// Monitoring configuration
+        /// </summary>
+        public MonitoringOptions Monitoring { get; set; } = new();
+
+        /// <summary>
+        /// Security configuration
+        /// </summary>
+        public SecurityOptions Security { get; set; } = new();
+
+        /// <summary>
+        /// Streaming configuration
+        /// </summary>
+        public StreamingOptions Streaming { get; set; } = new();
+
+        /// <summary>
+        /// Hot reload configuration
+        /// </summary>
+        public bool EnableHotReload { get; set; } = false;
+
+        /// <summary>
+        /// Configuration file path for hot reload
+        /// </summary>
+        public string? ConfigurationFilePath { get; set; }
+
+        /// <summary>
+        /// Environment-specific settings
+        /// </summary>
+        public string Environment { get; set; } = "Production";
+    }
+
+    /// <summary>
+    /// Circuit breaker options
+    /// </summary>
+    public class CircuitBreakerOptions
+    {
+        /// <summary>
+        /// Enable circuit breaker functionality
+        /// </summary>
+        public bool Enabled { get; set; } = false;
+
+        /// <summary>
+        /// Failure threshold before opening circuit
+        /// </summary>
+        [Range(1, 100)]
+        public int FailureThreshold { get; set; } = 5;
+
+        /// <summary>
+        /// Recovery timeout in seconds
+        /// </summary>
+        [Range(1, 3600)]
+        public int RecoveryTimeoutSeconds { get; set; } = 60;
+
+        /// <summary>
+        /// Success threshold to close circuit
+        /// </summary>
+        [Range(1, 10)]
+        public int SuccessThreshold { get; set; } = 3;
+
+        /// <summary>
+        /// Commands to exclude from circuit breaker
+        /// </summary>
+        public HashSet<string> ExcludedCommands { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Retry policy options
+    /// </summary>
+    public class RetryPolicyOptions
+    {
+        /// <summary>
+        /// Enable retry functionality
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// Maximum retry attempts
+        /// </summary>
+        [Range(0, 10)]
+        public int MaxAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// Initial delay between retries in milliseconds
+        /// </summary>
+        [Range(100, 10000)]
+        public int InitialDelayMs { get; set; } = 500;
+
+        /// <summary>
+        /// Backoff multiplier for exponential backoff
+        /// </summary>
+        [Range(1.0, 5.0)]
+        public double BackoffMultiplier { get; set; } = 2.0;
+
+        /// <summary>
+        /// Maximum delay between retries in milliseconds
+        /// </summary>
+        [Range(1000, 60000)]
+        public int MaxDelayMs { get; set; } = 5000;
+
+        /// <summary>
+        /// Commands to exclude from retry
+        /// </summary>
+        public HashSet<string> ExcludedCommands { get; set; } = new();
+
+        /// <summary>
+        /// Exception types that should trigger retry
+        /// </summary>
+        public HashSet<string> RetryableExceptions { get; set; } = new()
+        {
+            "System.TimeoutException",
+            "System.Net.Http.HttpRequestException",
+            "Microsoft.Data.SqlClient.SqlException"
+        };
+    }
+
+    /// <summary>
+    /// Caching options
+    /// </summary>
+    public class CachingOptions
+    {
+        /// <summary>
+        /// Enable caching functionality
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// Default cache expiry in minutes
+        /// </summary>
+        [Range(1, 1440)]
+        public int DefaultExpiryMinutes { get; set; } = 30;
+
+        /// <summary>
+        /// Cache expiry by priority
+        /// </summary>
+        public Dictionary<Priority, int> ExpiryByPriority { get; set; } = new()
+        {
+            { Priority.High, 1 },
+            { Priority.Normal, 5 },
+            { Priority.Low, 30 }
+        };
+
+        /// <summary>
+        /// Maximum cache size in MB
+        /// </summary>
+        [Range(10, 1000)]
+        public int MaxCacheSizeMB { get; set; } = 100;
+
+        /// <summary>
+        /// Commands to exclude from caching
+        /// </summary>
+        public HashSet<string> ExcludedCommands { get; set; } = new();
+
+        /// <summary>
+        /// Cache key prefix
+        /// </summary>
+        public string KeyPrefix { get; set; } = "PriorityFlow";
+    }
+
+    /// <summary>
+    /// Monitoring options
+    /// </summary>
+    public class MonitoringOptions
+    {
+        /// <summary>
+        /// Enable detailed metrics collection
+        /// </summary>
+        public bool EnableMetrics { get; set; } = true;
+
+        /// <summary>
+        /// Enable distributed tracing
+        /// </summary>
+        public bool EnableTracing { get; set; } = false;
+
+        /// <summary>
+        /// Health check endpoint path
+        /// </summary>
+        public string HealthCheckPath { get; set; } = "/health/priorityflow";
+
+        /// <summary>
+        /// Metrics export interval in seconds
+        /// </summary>
+        [Range(10, 300)]
+        public int MetricsExportIntervalSeconds { get; set; } = 60;
+
+        /// <summary>
+        /// Custom metrics tags
+        /// </summary>
+        public Dictionary<string, string> CustomTags { get; set; } = new();
+
+        /// <summary>
+        /// Commands to exclude from metrics
+        /// </summary>
+        public HashSet<string> ExcludedCommands { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Security options
+    /// </summary>
+    public class SecurityOptions
+    {
+        /// <summary>
+        /// Enable command validation
+        /// </summary>
+        public bool EnableValidation { get; set; } = true;
+
+        /// <summary>
+        /// Enable audit logging
+        /// </summary>
+        public bool EnableAuditLogging { get; set; } = false;
+
+        /// <summary>
+        /// Allowed command namespaces
+        /// </summary>
+        public HashSet<string> AllowedNamespaces { get; set; } = new();
+
+        /// <summary>
+        /// Blocked command namespaces
+        /// </summary>
+        public HashSet<string> BlockedNamespaces { get; set; } = new();
+
+        /// <summary>
+        /// Maximum request size in bytes
+        /// </summary>
+        [Range(1024, 10485760)] // 1KB to 10MB
+        public int MaxRequestSizeBytes { get; set; } = 1048576; // 1MB
+
+        /// <summary>
+        /// Rate limiting per command type
+        /// </summary>
+        public Dictionary<string, int> RateLimits { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Streaming options
+    /// </summary>
+    public class StreamingOptions
+    {
+        /// <summary>
+        /// Enable streaming functionality
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// Default batch size for streaming
+        /// </summary>
+        [Range(1, 1000)]
+        public int DefaultBatchSize { get; set; } = 10;
+
+        /// <summary>
+        /// Maximum concurrent streams
+        /// </summary>
+        [Range(1, 100)]
+        public int MaxConcurrentStreams { get; set; } = 10;
+
+        /// <summary>
+        /// Stream timeout in seconds
+        /// </summary>
+        [Range(30, 3600)]
+        public int StreamTimeoutSeconds { get; set; } = 300;
+
+        /// <summary>
+        /// Buffering options by priority
+        /// </summary>
+        public Dictionary<Priority, int> BufferSizeByPriority { get; set; } = new()
+        {
+            { Priority.High, 1 },    // No buffering for high priority
+            { Priority.Normal, 10 },  // Small buffer
+            { Priority.Low, 100 }    // Large buffer for efficiency
+        };
+    }
+
+    /// <summary>
+    /// Configuration validator
+    /// </summary>
+    public static class ConfigurationValidator
+    {
+        /// <summary>
+        /// Validate configuration settings
+        /// </summary>
+        public static ValidationResult ValidateConfiguration(AdvancedPriorityFlowConfiguration config)
+        {
+            var context = new ValidationContext(config);
+            var results = new List<ValidationResult>();
+
+            // Validate all nested objects
+            ValidateObject(config, context, results);
+            ValidateObject(config.CircuitBreaker, new ValidationContext(config.CircuitBreaker), results);
+            ValidateObject(config.RetryPolicy, new ValidationContext(config.RetryPolicy), results);
+            ValidateObject(config.Caching, new ValidationContext(config.Caching), results);
+            ValidateObject(config.Monitoring, new ValidationContext(config.Monitoring), results);
+            ValidateObject(config.Security, new ValidationContext(config.Security), results);
+            ValidateObject(config.Streaming, new ValidationContext(config.Streaming), results);
+
+            // Custom validation rules
+            ValidateCustomRules(config, results);
+
+            return new ValidationResult(results);
+        }
+
+        private static void ValidateObject(object obj, ValidationContext context, List<ValidationResult> results)
+        {
+            Validator.TryValidateObject(obj, context, results, true);
+        }
+
+        private static void ValidateCustomRules(AdvancedPriorityFlowConfiguration config, List<ValidationResult> results)
+        {
+            // Validate circuit breaker and retry compatibility
+            if (config.CircuitBreaker.Enabled && config.RetryPolicy.Enabled)
+            {
+                if (config.RetryPolicy.MaxAttempts > config.CircuitBreaker.FailureThreshold)
+                {
+                    results.Add(new ValidationResult(
+                        "Retry attempts should not exceed circuit breaker failure threshold",
+                        new[] { nameof(config.RetryPolicy.MaxAttempts), nameof(config.CircuitBreaker.FailureThreshold) }));
+                }
+            }
+
+            // Validate cache size limits
+            if (config.Caching.MaxCacheSizeMB < 10)
+            {
+                results.Add(new ValidationResult(
+                    "Minimum cache size is 10MB",
+                    new[] { nameof(config.Caching.MaxCacheSizeMB) }));
+            }
+
+            // Validate streaming limits
+            if (config.Streaming.MaxConcurrentStreams * config.Streaming.DefaultBatchSize > 1000)
+            {
+                results.Add(new ValidationResult(
+                    "Total streaming capacity (MaxConcurrentStreams * DefaultBatchSize) should not exceed 1000",
+                    new[] { nameof(config.Streaming.MaxConcurrentStreams), nameof(config.Streaming.DefaultBatchSize) }));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configuration validation result
+    /// </summary>
+    public class ValidationResult
+    {
+        public ValidationResult(List<System.ComponentModel.DataAnnotations.ValidationResult> errors)
+        {
+            Errors = errors;
+            IsValid = errors.Count == 0;
+        }
+
+        public bool IsValid { get; }
+        public List<System.ComponentModel.DataAnnotations.ValidationResult> Errors { get; }
+
+        public string GetErrorMessage()
+        {
+            if (IsValid) return string.Empty;
+            
+            return string.Join(Environment.NewLine, Errors.Select(e => e.ErrorMessage));
+        }
+    }
+
+    /// <summary>
+    /// Configuration builder with file loading and hot reload support
+    /// </summary>
+    public class AdvancedConfigurationBuilder
+    {
+        private AdvancedPriorityFlowConfiguration _configuration = new();
+        private FileSystemWatcher? _fileWatcher;
+        private readonly ILogger? _logger;
+
+        public AdvancedConfigurationBuilder(ILogger? logger = null)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Load configuration from file
+        /// </summary>
+        public AdvancedConfigurationBuilder LoadFromFile(string filePath)
+        {
+            try
+            {
+                var configBuilder = new ConfigurationBuilder()
+                    .AddJsonFile(filePath, optional: false, reloadOnChange: false);
+
+                var config = configBuilder.Build();
+                config.Bind(_configuration);
+
+                _configuration.ConfigurationFilePath = filePath;
+                
+                _logger?.LogInformation("📄 Configuration loaded from {FilePath}", filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "❌ Failed to load configuration from {FilePath}", filePath);
+                throw;
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Load configuration from IConfiguration
+        /// </summary>
+        public AdvancedConfigurationBuilder LoadFromConfiguration(IConfiguration configuration, string sectionName = "PriorityFlow")
+        {
+            var section = configuration.GetSection(sectionName);
+            section.Bind(_configuration);
+
+            _logger?.LogInformation("📄 Configuration loaded from section {SectionName}", sectionName);
+            return this;
+        }
+
+        /// <summary>
+        /// Enable hot reload functionality
+        /// </summary>
+        public AdvancedConfigurationBuilder EnableHotReload(Action<AdvancedPriorityFlowConfiguration>? onConfigChanged = null)
+        {
+            if (string.IsNullOrEmpty(_configuration.ConfigurationFilePath))
+            {
+                throw new InvalidOperationException("Configuration file path is required for hot reload");
+            }
+
+            _configuration.EnableHotReload = true;
+
+            SetupFileWatcher(onConfigChanged);
+
+            _logger?.LogInformation("🔄 Hot reload enabled for {FilePath}", _configuration.ConfigurationFilePath);
+            return this;
+        }
+
+        /// <summary>
+        /// Validate configuration
+        /// </summary>
+        public AdvancedConfigurationBuilder Validate()
+        {
+            var validationResult = ConfigurationValidator.ValidateConfiguration(_configuration);
+            
+            if (!validationResult.IsValid)
+            {
+                var errorMessage = validationResult.GetErrorMessage();
+                _logger?.LogError("❌ Configuration validation failed: {Errors}", errorMessage);
+                throw new InvalidOperationException($"Configuration validation failed: {errorMessage}");
+            }
+
+            _logger?.LogInformation("✅ Configuration validation passed");
+            return this;
+        }
+
+        /// <summary>
+        /// Build final configuration
+        /// </summary>
+        public AdvancedPriorityFlowConfiguration Build()
+        {
+            return _configuration;
+        }
+
+        private void SetupFileWatcher(Action<AdvancedPriorityFlowConfiguration>? onConfigChanged)
+        {
+            if (_fileWatcher != null)
+            {
+                _fileWatcher.Dispose();
+            }
+
+            var filePath = _configuration.ConfigurationFilePath!;
+            var directory = Path.GetDirectoryName(filePath)!;
+            var fileName = Path.GetFileName(filePath);
+
+            _fileWatcher = new FileSystemWatcher(directory, fileName)
+            {
+                NotifyFilter = NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
+
+            _fileWatcher.Changed += (sender, e) =>
+            {
+                try
+                {
+                    _logger?.LogInformation("🔄 Configuration file changed, reloading...");
+                    
+                    // Brief delay to ensure file is fully written
+                    Thread.Sleep(100);
+                    
+                    LoadFromFile(filePath);
+                    Validate();
+                    
+                    onConfigChanged?.Invoke(_configuration);
+                    
+                    _logger?.LogInformation("✅ Configuration reloaded successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "❌ Failed to reload configuration");
+                }
+            };
+        }
+
+        public void Dispose()
+        {
+            _fileWatcher?.Dispose();
+        }
+    }
+}

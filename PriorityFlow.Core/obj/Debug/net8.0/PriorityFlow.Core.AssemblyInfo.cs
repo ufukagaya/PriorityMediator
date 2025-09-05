@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyDescriptionAttribute(("Priority-aware MediatR alternative with intelligent command execution ordering. D" +
     "rop-in replacement with zero configuration and maximum developer experience."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+21a61303f8ea3ece24baddfc0fd5169476011820")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f893bd0c9d2576ef8debf171bd6ce7d22a6a14b0")]
 [assembly: System.Reflection.AssemblyProductAttribute("PriorityFlow")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PriorityFlow.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

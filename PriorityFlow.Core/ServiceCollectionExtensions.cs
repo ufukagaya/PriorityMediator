@@ -47,8 +47,7 @@ namespace PriorityFlow.Extensions
             services.AddScoped<ISender, SimplePriorityMediator>();
             services.AddScoped<IPublisher, SimplePriorityMediator>();
 
-            // Add logging if not already registered
-            services.AddLogging();
+            // Logging should be registered by host application
 
             return services;
         }
@@ -99,8 +98,7 @@ namespace PriorityFlow.Extensions
             services.AddScoped<ISender, SimplePriorityMediator>();
             services.AddScoped<IPublisher, SimplePriorityMediator>();
 
-            // Add logging
-            services.AddLogging();
+            // Logging should be registered by host application
 
             return services;
         }

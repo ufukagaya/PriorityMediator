@@ -1,0 +1,421 @@
+// PriorityFlow.Core.HealthChecks - Health Check Implementation
+// Production-ready health monitoring with detailed diagnostics
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using PriorityFlow.Caching;
+using PriorityFlow.Configuration;
+
+namespace PriorityFlow.HealthChecks
+{
+    /// <summary>
+    /// Health check for PriorityFlow core functionality
+    /// </summary>
+    public class PriorityFlowHealthCheck : IHealthCheck
+    {
+        private readonly IServiceProvider _serviceProvider;
+        private readonly AdvancedPriorityFlowConfiguration _configuration;
+        private readonly ILogger<PriorityFlowHealthCheck> _logger;
+
+        public PriorityFlowHealthCheck(
+            IServiceProvider serviceProvider,
+            AdvancedPriorityFlowConfiguration configuration,
+            ILogger<PriorityFlowHealthCheck> logger)
+        {
+            _serviceProvider = serviceProvider;
+            _configuration = configuration;
+            _logger = logger;
+        }
+
+        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var healthData = new Dictionary<string, object>();
+                var issues = new List<string>();
+
+                // Check core services
+                await CheckCoreServices(healthData, issues);
+
+                // Check configuration
+                CheckConfiguration(healthData, issues);
+
+                // Check caching if enabled
+                if (_configuration.Caching.Enabled)
+                {
+                    await CheckCaching(healthData, issues);
+                }
+
+                // Check handlers registration
+                await CheckHandlersRegistration(healthData, issues);
+
+                // Determine overall health status
+                var status = DetermineHealthStatus(issues);
+                
+                _logger.LogDebug("🏥 Health check completed with status: {Status}", status);
+
+                return new HealthCheckResult(
+                    status,
+                    description: GetHealthDescription(status),
+                    data: healthData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Health check failed with exception");
+                return HealthCheckResult.Unhealthy(
+                    description: "Health check failed with exception",
+                    exception: ex);
+            }
+        }
+
+        private async Task CheckCoreServices(Dictionary<string, object> healthData, List<string> issues)
+        {
+            try
+            {
+                // Check if IMediator is registered
+                var mediator = _serviceProvider.GetService<IMediator>();
+                if (mediator == null)
+                {
+                    issues.Add("IMediator service not registered");
+                    healthData["mediator_registered"] = false;
+                }
+                else
+                {
+                    healthData["mediator_registered"] = true;
+                    healthData["mediator_type"] = mediator.GetType().Name;
+                }
+
+                // Test basic functionality with a simple ping command
+                if (mediator != null)
+                {
+                    var startTime = DateTime.UtcNow;
+                    try
+                    {
+                        await mediator.Send(new PingCommand(), CancellationToken.None);
+                        var responseTime = DateTime.UtcNow - startTime;
+                        healthData["ping_response_time_ms"] = responseTime.TotalMilliseconds;
+                        
+                        if (responseTime.TotalMilliseconds > 5000) // 5 seconds threshold
+                        {
+                            issues.Add($"Slow mediator response: {responseTime.TotalMilliseconds}ms");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        issues.Add($"Mediator ping failed: {ex.Message}");
+                        healthData["ping_error"] = ex.Message;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                issues.Add($"Core services check failed: {ex.Message}");
+                healthData["core_services_error"] = ex.Message;
+            }
+        }
+
+        private void CheckConfiguration(Dictionary<string, object> healthData, List<string> issues)
+        {
+            try
+            {
+                // Validate configuration
+                var validationResult = ConfigurationValidator.ValidateConfiguration(_configuration);
+                healthData["configuration_valid"] = validationResult.IsValid;
+                
+                if (!validationResult.IsValid)
+                {
+                    issues.Add("Configuration validation failed");
+                    healthData["configuration_errors"] = validationResult.Errors.Select(e => e.ErrorMessage).ToArray();
+                }
+
+                // Check critical settings
+                healthData["environment"] = _configuration.Environment;
+                healthData["debug_logging_enabled"] = _configuration.EnableDebugLogging;
+                healthData["performance_tracking_enabled"] = _configuration.EnablePerformanceTracking;
+                
+                // Check thresholds
+                if (_configuration.SlowCommandThresholdMs < 100 || _configuration.SlowCommandThresholdMs > 30000)
+                {
+                    issues.Add($"Suspicious slow command threshold: {_configuration.SlowCommandThresholdMs}ms");
+                }
+                
+                healthData["slow_command_threshold_ms"] = _configuration.SlowCommandThresholdMs;
+            }
+            catch (Exception ex)
+            {
+                issues.Add($"Configuration check failed: {ex.Message}");
+                healthData["configuration_error"] = ex.Message;
+            }
+        }
+
+        private async Task CheckCaching(Dictionary<string, object> healthData, List<string> issues)
+        {
+            try
+            {
+                var cache = _serviceProvider.GetService<IPriorityCache>();
+                if (cache == null)
+                {
+                    issues.Add("Caching enabled but IPriorityCache not registered");
+                    healthData["cache_registered"] = false;
+                    return;
+                }
+
+                healthData["cache_registered"] = true;
+                healthData["cache_type"] = cache.GetType().Name;
+
+                // Test cache functionality
+                var testKey = $"health_check_{Guid.NewGuid()}";
+                var testValue = "health_check_value";
+                
+                try
+                {
+                    // Test set
+                    await cache.SetAsync(testKey, testValue, TimeSpan.FromMinutes(1));
+                    
+                    // Test get
+                    var retrieved = await cache.GetAsync<string>(testKey);
+                    if (retrieved != testValue)
+                    {
+                        issues.Add("Cache set/get test failed");
+                        healthData["cache_test_passed"] = false;
+                    }
+                    else
+                    {
+                        healthData["cache_test_passed"] = true;
+                    }
+                    
+                    // Clean up
+                    await cache.RemoveAsync(testKey);
+                    
+                    // Get statistics
+                    var stats = await cache.GetStatisticsAsync();
+                    healthData["cache_hit_ratio"] = stats.HitRatio;
+                    healthData["cache_total_requests"] = stats.TotalRequests;
+                    healthData["cache_errors"] = stats.Errors;
+                    
+                    if (stats.Errors > 0 && stats.TotalRequests > 0)
+                    {
+                        var errorRate = (double)stats.Errors / stats.TotalRequests;
+                        if (errorRate > 0.1) // 10% error rate threshold
+                        {
+                            issues.Add($"High cache error rate: {errorRate:P}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    issues.Add($"Cache functionality test failed: {ex.Message}");
+                    healthData["cache_test_error"] = ex.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                issues.Add($"Cache check failed: {ex.Message}");
+                healthData["cache_error"] = ex.Message;
+            }
+        }
+
+        private async Task CheckHandlersRegistration(Dictionary<string, object> healthData, List<string> issues)
+        {
+            try
+            {
+                // Try to resolve some common handler interfaces to ensure they're registered
+                var handlerInterfaces = new[]
+                {
+                    typeof(IRequestHandler<PingCommand>)
+                };
+
+                var registeredHandlers = 0;
+                var missingHandlers = new List<string>();
+
+                foreach (var handlerInterface in handlerInterfaces)
+                {
+                    try
+                    {
+                        var handler = _serviceProvider.GetService(handlerInterface);
+                        if (handler != null)
+                        {
+                            registeredHandlers++;
+                        }
+                        else
+                        {
+                            missingHandlers.Add(handlerInterface.Name);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        missingHandlers.Add(handlerInterface.Name);
+                    }
+                }
+
+                healthData["registered_handlers_count"] = registeredHandlers;
+                
+                if (missingHandlers.Count > 0)
+                {
+                    healthData["missing_handlers"] = missingHandlers.ToArray();
+                }
+
+                // This is informational, not necessarily an issue unless no handlers are found
+                if (registeredHandlers == 0)
+                {
+                    issues.Add("No test handlers found - ensure handlers are properly registered");
+                }
+            }
+            catch (Exception ex)
+            {
+                issues.Add($"Handler registration check failed: {ex.Message}");
+                healthData["handlers_check_error"] = ex.Message;
+            }
+
+            // Simulate async work
+            await Task.Delay(1);
+        }
+
+        private static HealthStatus DetermineHealthStatus(List<string> issues)
+        {
+            if (issues.Count == 0)
+                return HealthStatus.Healthy;
+            
+            // Check for critical issues
+            var criticalKeywords = new[] { "not registered", "failed", "exception" };
+            var hasCriticalIssues = issues.Any(issue => 
+                criticalKeywords.Any(keyword => issue.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
+            
+            return hasCriticalIssues ? HealthStatus.Unhealthy : HealthStatus.Degraded;
+        }
+
+        private static string GetHealthDescription(HealthStatus status)
+        {
+            return status switch
+            {
+                HealthStatus.Healthy => "PriorityFlow is operating normally",
+                HealthStatus.Degraded => "PriorityFlow is operating with minor issues",
+                HealthStatus.Unhealthy => "PriorityFlow has critical issues",
+                _ => "PriorityFlow health status unknown"
+            };
+        }
+    }
+
+    /// <summary>
+    /// Simple ping command for health check testing
+    /// </summary>
+    public record PingCommand : IRequest
+    {
+        public DateTime Timestamp { get; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Ping command handler for health check testing
+    /// </summary>
+    public class PingCommandHandler : IRequestHandler<PingCommand>
+    {
+        public Task Handle(PingCommand request, CancellationToken cancellationToken)
+        {
+            // Simple ping response - just return completed task
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// Priority conventions health check
+    /// </summary>
+    public class PriorityConventionsHealthCheck : IHealthCheck
+    {
+        private readonly ILogger<PriorityConventionsHealthCheck> _logger;
+
+        public PriorityConventionsHealthCheck(ILogger<PriorityConventionsHealthCheck> logger)
+        {
+            _logger = logger;
+        }
+
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var healthData = new Dictionary<string, object>();
+                var issues = new List<string>();
+
+                // Test priority conventions
+                TestPriorityConventions(healthData, issues);
+
+                // Get convention statistics
+                GetConventionStatistics(healthData);
+
+                var status = issues.Count == 0 ? HealthStatus.Healthy : HealthStatus.Degraded;
+                
+                return Task.FromResult(new HealthCheckResult(
+                    status,
+                    description: $"Priority conventions check - {issues.Count} issues found",
+                    data: healthData));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Priority conventions health check failed");
+                return Task.FromResult(HealthCheckResult.Unhealthy(
+                    description: "Priority conventions check failed",
+                    exception: ex));
+            }
+        }
+
+        private static void TestPriorityConventions(Dictionary<string, object> healthData, List<string> issues)
+        {
+            // Test known command types
+            var testCases = new[]
+            {
+                (typeof(PingCommand), Priority.Normal),
+                // Add more test cases here as needed
+            };
+
+            var correctPredictions = 0;
+            var totalTests = testCases.Length;
+
+            foreach (var (commandType, expectedPriority) in testCases)
+            {
+                var actualPriority = PriorityConventions.GetConventionBasedPriority(commandType);
+                if (actualPriority == expectedPriority)
+                {
+                    correctPredictions++;
+                }
+                else
+                {
+                    issues.Add($"Priority mismatch for {commandType.Name}: expected {expectedPriority}, got {actualPriority}");
+                }
+            }
+
+            healthData["priority_prediction_accuracy"] = totalTests > 0 ? (double)correctPredictions / totalTests : 0;
+            healthData["correct_predictions"] = correctPredictions;
+            healthData["total_tests"] = totalTests;
+        }
+
+        private static void GetConventionStatistics(Dictionary<string, object> healthData)
+        {
+            try
+            {
+                var usageStats = PriorityConventions.GetUsageStatistics();
+                healthData["usage_statistics_count"] = usageStats.Count;
+                
+                if (usageStats.Count > 0)
+                {
+                    healthData["most_used_command"] = usageStats.OrderByDescending(kvp => kvp.Value).First().Key;
+                    healthData["total_command_executions"] = usageStats.Values.Sum();
+                }
+
+                var allConventions = PriorityConventions.GetAllConventions();
+                healthData["registered_conventions_count"] = allConventions.Count;
+                healthData["high_priority_conventions"] = allConventions.Count(kvp => kvp.Value == Priority.High);
+                healthData["normal_priority_conventions"] = allConventions.Count(kvp => kvp.Value == Priority.Normal);
+                healthData["low_priority_conventions"] = allConventions.Count(kvp => kvp.Value == Priority.Low);
+            }
+            catch (Exception ex)
+            {
+                healthData["statistics_error"] = ex.Message;
+            }
+        }
+    }
+}
