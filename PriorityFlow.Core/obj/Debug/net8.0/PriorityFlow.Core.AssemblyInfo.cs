@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © PriorityFlow Contributors 2024")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute(@"🚀 Priority-aware MediatR alternative with intelligent command execution ordering. Drop-in replacement with zero configuration, automatic priority detection, and maximum developer experience. Perfect for high-performance applications requiring smart request handling.")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ac029945dd636a2f78c16199e32722ebc5397b3c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5896912fc581ff7b8090640c7a8bb3298c65476f")]
 [assembly: System.Reflection.AssemblyProductAttribute("PriorityFlow")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PriorityFlow.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

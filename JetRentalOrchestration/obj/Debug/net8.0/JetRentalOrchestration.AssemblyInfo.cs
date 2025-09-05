@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("JetRentalOrchestration")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f893bd0c9d2576ef8debf171bd6ce7d22a6a14b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5896912fc581ff7b8090640c7a8bb3298c65476f")]
 [assembly: System.Reflection.AssemblyProductAttribute("JetRentalOrchestration")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JetRentalOrchestration")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

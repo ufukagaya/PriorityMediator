@@ -60,6 +60,33 @@ namespace PriorityFlow
         public double MaxAverageWaitTimeThreshold { get; set; } = 5000.0;
 
         internal Dictionary<string, Priority> CustomConventions { get; set; } = new();
+
+        /// <summary>
+        /// Internal queuing options for advanced queue configuration
+        /// </summary>
+        internal QueuingOptions? QueuingOptions { get; set; }
+    }
+
+    /// <summary>
+    /// Configuration options for priority queue processing
+    /// </summary>
+    public class QueuingOptions
+    {
+        /// <summary>
+        /// Gets or sets the number of concurrent workers processing the priority queue.
+        /// Default is 1.
+        /// </summary>
+        public int WorkerCount { get; set; } = 1;
+
+        /// <summary>
+        /// Gets or sets the maximum capacity for each priority queue (null for unbounded)
+        /// </summary>
+        public int? MaxQueueCapacity { get; set; } = null;
+
+        /// <summary>
+        /// Gets or sets whether to enable detailed logging for queue operations
+        /// </summary>
+        public bool EnableDetailedLogging { get; set; } = false;
     }
 
     /// <summary>
@@ -129,6 +156,28 @@ namespace PriorityFlow
         {
             _configuration.EnableQueuedProcessing = enabled;
             _configuration.MaxQueueCapacity = maxCapacity;
+            return this;
+        }
+
+        /// <summary>
+        /// Configure background queue processing with detailed options
+        /// </summary>
+        public PriorityFlowConfigurationBuilder WithQueuing(Action<QueuingOptions>? configureOptions = null)
+        {
+            _configuration.EnableQueuedProcessing = true;
+            
+            if (configureOptions != null)
+            {
+                var options = new QueuingOptions();
+                configureOptions(options);
+                
+                // Apply the queuing options to the main configuration
+                _configuration.MaxQueueCapacity = options.MaxQueueCapacity;
+                
+                // Store queuing options for later use in service registration
+                _configuration.QueuingOptions = options;
+            }
+            
             return this;
         }
 

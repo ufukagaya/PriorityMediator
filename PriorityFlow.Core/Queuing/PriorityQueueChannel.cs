@@ -264,6 +264,21 @@ namespace PriorityFlow.Queuing
         public int? MaxCapacity => _maxCapacity;
 
         /// <summary>
+        /// Gets the high priority channel reader for direct access by workers
+        /// </summary>
+        public ChannelReader<PriorityRequest> HighPriorityReader => _highPriorityReader;
+
+        /// <summary>
+        /// Gets the normal priority channel reader for direct access by workers
+        /// </summary>
+        public ChannelReader<PriorityRequest> NormalPriorityReader => _normalPriorityReader;
+
+        /// <summary>
+        /// Gets the low priority channel reader for direct access by workers
+        /// </summary>
+        public ChannelReader<PriorityRequest> LowPriorityReader => _lowPriorityReader;
+
+        /// <summary>
         /// Dispose resources and complete all channels
         /// </summary>
         public void Dispose()

@@ -36,19 +36,30 @@ namespace PriorityFlow.Queuing
 
         /// <summary>
         /// Main execution loop - consumes requests from priority queue and processes them
+        /// Uses efficient non-blocking priority dequeue logic for true priority handling
         /// </summary>
         /// <param name="stoppingToken">Cancellation token for graceful shutdown</param>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("PriorityRequestWorker started - processing requests in priority order");
+            _logger.LogInformation("PriorityRequestWorker started - processing requests in priority order with true priority handling");
 
             try
             {
-                await foreach (var priorityRequest in _queueChannel.GetConsumingAsyncEnumerable(stoppingToken))
+                // Cast to concrete type to access priority readers directly
+                if (_queueChannel is not PriorityQueueChannel concreteChannel)
                 {
-                    if (stoppingToken.IsCancellationRequested)
+                    _logger.LogError("IPriorityQueueChannel is not PriorityQueueChannel - cannot access priority readers");
+                    throw new InvalidOperationException("Priority queue channel must be PriorityQueueChannel for priority worker functionality");
+                }
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var priorityRequest = await DequeueNextRequestAsync(concreteChannel, stoppingToken);
+                    
+                    if (priorityRequest == null)
                     {
-                        _logger.LogInformation("Shutdown requested - completing current request and stopping");
+                        // No more requests and all channels are completed
+                        _logger.LogInformation("All priority queues completed - stopping worker");
                         break;
                     }
 
@@ -75,6 +86,78 @@ namespace PriorityFlow.Queuing
             {
                 _logger.LogInformation("PriorityRequestWorker stopped");
             }
+        }
+
+        /// <summary>
+        /// Efficient priority-aware dequeue logic that ensures high priority requests are always processed first
+        /// </summary>
+        /// <param name="channel">The concrete priority queue channel</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The next priority request or null if all channels are completed</returns>
+        private async Task<PriorityRequest?> DequeueNextRequestAsync(PriorityQueueChannel channel, CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // Step 1: Attempt non-blocking read from high-priority channel
+                if (channel.HighPriorityReader.TryRead(out var highRequest))
+                {
+                    _logger.LogDebug("Dequeued high-priority request: {RequestId} ({RequestType})", 
+                        highRequest.RequestId, highRequest.RequestTypeName);
+                    return highRequest;
+                }
+
+                // Step 2: Attempt non-blocking read from normal-priority channel  
+                if (channel.NormalPriorityReader.TryRead(out var normalRequest))
+                {
+                    _logger.LogDebug("Dequeued normal-priority request: {RequestId} ({RequestType})", 
+                        normalRequest.RequestId, normalRequest.RequestTypeName);
+                    return normalRequest;
+                }
+
+                // Step 3: Attempt non-blocking read from low-priority channel
+                if (channel.LowPriorityReader.TryRead(out var lowRequest))
+                {
+                    _logger.LogDebug("Dequeued low-priority request: {RequestId} ({RequestType})", 
+                        lowRequest.RequestId, lowRequest.RequestTypeName);
+                    return lowRequest;
+                }
+
+                // Step 4: All channels are empty - wait asynchronously for the next available item
+                try
+                {
+                    var highWaitTask = channel.HighPriorityReader.WaitToReadAsync(cancellationToken).AsTask();
+                    var normalWaitTask = channel.NormalPriorityReader.WaitToReadAsync(cancellationToken).AsTask();
+                    var lowWaitTask = channel.LowPriorityReader.WaitToReadAsync(cancellationToken).AsTask();
+
+                    // Wait for any channel to have data available
+                    var completedTask = await Task.WhenAny(highWaitTask, normalWaitTask, lowWaitTask);
+                    
+                    // After WhenAny completes, restart from step 1 to ensure high-priority is checked first
+                    _logger.LogDebug("Channel activity detected - rechecking priorities from high to low");
+                    continue;
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogDebug("Priority dequeue cancelled");
+                    return null;
+                }
+                catch (InvalidOperationException)
+                {
+                    // Check if all channels are completed
+                    if (channel.HighPriorityReader.Completion.IsCompleted && 
+                        channel.NormalPriorityReader.Completion.IsCompleted && 
+                        channel.LowPriorityReader.Completion.IsCompleted)
+                    {
+                        _logger.LogInformation("All priority channels completed");
+                        return null;
+                    }
+                    
+                    // If not all completed, continue waiting
+                    continue;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

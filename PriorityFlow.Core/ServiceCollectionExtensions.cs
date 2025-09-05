@@ -53,7 +53,7 @@ namespace PriorityFlow.Extensions
                 // Register queuing services
                 services.AddSingleton<IPriorityQueueChannel>(provider => 
                     new PriorityQueueChannel(configuration.MaxQueueCapacity, provider.GetService<ILogger<PriorityQueueChannel>>()));
-                services.AddHostedService<PriorityRequestWorker>();
+                RegisterPriorityWorkers(services, configuration);
                 
                 // Use queued mediator
                 services.AddScoped<IMediator, QueuedPriorityMediator>();
@@ -129,7 +129,7 @@ namespace PriorityFlow.Extensions
                 // Register queuing services
                 services.AddSingleton<IPriorityQueueChannel>(provider => 
                     new PriorityQueueChannel(configuration.MaxQueueCapacity, provider.GetService<ILogger<PriorityQueueChannel>>()));
-                services.AddHostedService<PriorityRequestWorker>();
+                RegisterPriorityWorkers(services, configuration);
                 
                 // Use queued mediator
                 services.AddScoped<IMediator, QueuedPriorityMediator>();
@@ -248,6 +248,23 @@ namespace PriorityFlow.Extensions
             {
                 services.AddTransient(typeof(IPipelineBehavior<>), typeof(PerformanceMonitoringBehavior<>));
                 services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceMonitoringBehavior<,>));
+            }
+        }
+
+        /// <summary>
+        /// Register priority request workers based on configuration
+        /// </summary>
+        private static void RegisterPriorityWorkers(IServiceCollection services, PriorityFlowConfiguration configuration)
+        {
+            var workerCount = configuration.QueuingOptions?.WorkerCount ?? 1;
+            
+            // Ensure minimum of 1 worker
+            workerCount = Math.Max(1, workerCount);
+            
+            // Register the specified number of workers
+            for (int i = 0; i < workerCount; i++)
+            {
+                services.AddHostedService<PriorityRequestWorker>();
             }
         }
 

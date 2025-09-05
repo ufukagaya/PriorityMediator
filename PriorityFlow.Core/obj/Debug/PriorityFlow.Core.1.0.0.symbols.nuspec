@@ -41,7 +41,7 @@
 • Security-scanned dependencies</releaseNotes>
     <copyright>Copyright © PriorityFlow Contributors 2024</copyright>
     <tags>mediatr cqrs priority command query pattern architecture ddd clean-architecture performance dotnet aspnet microservices messaging</tags>
-    <repository type="git" url="https://github.com/priorityflow/priorityflow.git" branch="main" commit="ac029945dd636a2f78c16199e32722ebc5397b3c" />
+    <repository type="git" url="https://github.com/priorityflow/priorityflow.git" branch="main" commit="5896912fc581ff7b8090640c7a8bb3298c65476f" />
     <dependencies>
       <group targetFramework="net8.0">
         <dependency id="FluentValidation" version="11.9.0" exclude="Build,Analyzers" />

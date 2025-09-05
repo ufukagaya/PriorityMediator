@@ -211,6 +211,32 @@
             Maximum average wait time in milliseconds before marking system as unhealthy
             </summary>
         </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.QueuingOptions">
+            <summary>
+            Internal queuing options for advanced queue configuration
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.QueuingOptions">
+            <summary>
+            Configuration options for priority queue processing
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.QueuingOptions.WorkerCount">
+            <summary>
+            Gets or sets the number of concurrent workers processing the priority queue.
+            Default is 1.
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.QueuingOptions.MaxQueueCapacity">
+            <summary>
+            Gets or sets the maximum capacity for each priority queue (null for unbounded)
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.QueuingOptions.EnableDetailedLogging">
+            <summary>
+            Gets or sets whether to enable detailed logging for queue operations
+            </summary>
+        </member>
         <member name="T:PriorityFlow.PriorityFlowConfigurationBuilder">
             <summary>
             Fluent configuration builder for PriorityFlow
@@ -244,6 +270,11 @@
         <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithQueuing(System.Boolean,System.Nullable{System.Int32})">
             <summary>
             Enable background queue processing for priority-based execution
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithQueuing(System.Action{PriorityFlow.QueuingOptions})">
+            <summary>
+            Configure background queue processing with detailed options
             </summary>
         </member>
         <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithValidation(System.Boolean)">
@@ -1001,6 +1032,21 @@
         <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.MaxCapacity">
             <inheritdoc />
         </member>
+        <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.HighPriorityReader">
+            <summary>
+            Gets the high priority channel reader for direct access by workers
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.NormalPriorityReader">
+            <summary>
+            Gets the normal priority channel reader for direct access by workers
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.LowPriorityReader">
+            <summary>
+            Gets the low priority channel reader for direct access by workers
+            </summary>
+        </member>
         <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.Dispose">
             <summary>
             Dispose resources and complete all channels
@@ -1115,8 +1161,17 @@
         <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.ExecuteAsync(System.Threading.CancellationToken)">
             <summary>
             Main execution loop - consumes requests from priority queue and processes them
+            Uses efficient non-blocking priority dequeue logic for true priority handling
             </summary>
             <param name="stoppingToken">Cancellation token for graceful shutdown</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.DequeueNextRequestAsync(PriorityFlow.Queuing.PriorityQueueChannel,System.Threading.CancellationToken)">
+            <summary>
+            Efficient priority-aware dequeue logic that ensures high priority requests are always processed first
+            </summary>
+            <param name="channel">The concrete priority queue channel</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The next priority request or null if all channels are completed</returns>
         </member>
         <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.ProcessPriorityRequestAsync(PriorityFlow.Queuing.PriorityRequest,System.Threading.CancellationToken)">
             <summary>
@@ -1181,6 +1236,11 @@
         <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.RegisterBehaviors(Microsoft.Extensions.DependencyInjection.IServiceCollection,PriorityFlow.PriorityFlowConfiguration)">
             <summary>
             Register pipeline behaviors based on configuration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.RegisterPriorityWorkers(Microsoft.Extensions.DependencyInjection.IServiceCollection,PriorityFlow.PriorityFlowConfiguration)">
+            <summary>
+            Register priority request workers based on configuration
             </summary>
         </member>
         <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddValidationBehavior(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
