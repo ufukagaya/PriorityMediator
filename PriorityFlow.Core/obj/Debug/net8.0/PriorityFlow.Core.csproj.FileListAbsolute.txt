@@ -11,3 +11,5 @@ C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\Priori
 C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\refint\PriorityFlow.Core.dll
 C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.pdb
 C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\ref\PriorityFlow.Core.dll
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.xml
+C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\obj\Debug\net8.0\PriorityFlow.Core.xml

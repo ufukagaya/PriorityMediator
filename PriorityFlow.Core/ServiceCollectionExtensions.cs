@@ -1,9 +1,14 @@
 // PriorityFlow.Core - Dependency Injection Extensions
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using PriorityFlow.Queuing;
+using PriorityFlow.Behaviors;
+using PriorityFlow.Observability;
 
 namespace PriorityFlow.Extensions
 {
@@ -42,10 +47,35 @@ namespace PriorityFlow.Extensions
             // Register all handlers from assembly
             RegisterHandlers(services, assembly);
 
-            // Register core services
-            services.AddScoped<IMediator, SimplePriorityMediator>();
-            services.AddScoped<ISender, SimplePriorityMediator>();
-            services.AddScoped<IPublisher, SimplePriorityMediator>();
+            // Register core services based on configuration
+            if (configuration.EnableQueuedProcessing)
+            {
+                // Register queuing services
+                services.AddSingleton<IPriorityQueueChannel>(provider => 
+                    new PriorityQueueChannel(configuration.MaxQueueCapacity, provider.GetService<ILogger<PriorityQueueChannel>>()));
+                services.AddHostedService<PriorityRequestWorker>();
+                
+                // Use queued mediator
+                services.AddScoped<IMediator, QueuedPriorityMediator>();
+                services.AddScoped<ISender, QueuedPriorityMediator>();
+                services.AddScoped<IPublisher, QueuedPriorityMediator>();
+            }
+            else
+            {
+                // Use enhanced mediator for immediate processing with behaviors
+                services.AddScoped<IMediator, EnhancedPriorityMediator>();
+                services.AddScoped<ISender, EnhancedPriorityMediator>();
+                services.AddScoped<IPublisher, EnhancedPriorityMediator>();
+            }
+
+            // Register observability services
+            if (configuration.EnableMetrics)
+            {
+                services.AddSingleton<IPriorityFlowMetrics, PriorityFlowMetrics>();
+            }
+
+            // Register behaviors based on configuration
+            RegisterBehaviors(services, configuration);
 
             // Logging should be registered by host application
 
@@ -93,10 +123,35 @@ namespace PriorityFlow.Extensions
                 RegisterHandlers(services, assembly);
             }
 
-            // Register core services
-            services.AddScoped<IMediator, SimplePriorityMediator>();
-            services.AddScoped<ISender, SimplePriorityMediator>();
-            services.AddScoped<IPublisher, SimplePriorityMediator>();
+            // Register core services based on configuration
+            if (configuration.EnableQueuedProcessing)
+            {
+                // Register queuing services
+                services.AddSingleton<IPriorityQueueChannel>(provider => 
+                    new PriorityQueueChannel(configuration.MaxQueueCapacity, provider.GetService<ILogger<PriorityQueueChannel>>()));
+                services.AddHostedService<PriorityRequestWorker>();
+                
+                // Use queued mediator
+                services.AddScoped<IMediator, QueuedPriorityMediator>();
+                services.AddScoped<ISender, QueuedPriorityMediator>();
+                services.AddScoped<IPublisher, QueuedPriorityMediator>();
+            }
+            else
+            {
+                // Use enhanced mediator for immediate processing with behaviors
+                services.AddScoped<IMediator, EnhancedPriorityMediator>();
+                services.AddScoped<ISender, EnhancedPriorityMediator>();
+                services.AddScoped<IPublisher, EnhancedPriorityMediator>();
+            }
+
+            // Register observability services
+            if (configuration.EnableMetrics)
+            {
+                services.AddSingleton<IPriorityFlowMetrics, PriorityFlowMetrics>();
+            }
+
+            // Register behaviors based on configuration
+            RegisterBehaviors(services, configuration);
 
             // Logging should be registered by host application
 
@@ -175,6 +230,85 @@ namespace PriorityFlow.Extensions
                 }
             }
         }
+
+        /// <summary>
+        /// Register pipeline behaviors based on configuration
+        /// </summary>
+        private static void RegisterBehaviors(IServiceCollection services, PriorityFlowConfiguration configuration)
+        {
+            // Register validation behavior if enabled
+            if (configuration.EnableValidation)
+            {
+                services.AddTransient(typeof(IPipelineBehavior<>), typeof(ValidationBehavior<>));
+                services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            }
+
+            // Register performance monitoring behavior if enabled
+            if (configuration.EnablePerformanceTracking)
+            {
+                services.AddTransient(typeof(IPipelineBehavior<>), typeof(PerformanceMonitoringBehavior<>));
+                services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceMonitoringBehavior<,>));
+            }
+        }
+
+        /// <summary>
+        /// Add validation behavior to the pipeline
+        /// </summary>
+        public static IServiceCollection AddValidationBehavior(this IServiceCollection services)
+        {
+            services.AddTransient(typeof(IPipelineBehavior<>), typeof(ValidationBehavior<>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            return services;
+        }
+
+        /// <summary>
+        /// Add performance monitoring behavior to the pipeline
+        /// </summary>
+        public static IServiceCollection AddPerformanceMonitoringBehavior(this IServiceCollection services)
+        {
+            services.AddTransient(typeof(IPipelineBehavior<>), typeof(PerformanceMonitoringBehavior<>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceMonitoringBehavior<,>));
+            return services;
+        }
+
+        /// <summary>
+        /// Add PriorityFlow health check for monitoring integration
+        /// </summary>
+        public static IServiceCollection AddPriorityFlowHealthCheck(this IServiceCollection services, string name = "priorityflow")
+        {
+            return services.AddHealthChecks()
+                          .AddCheck<PriorityQueueHealthCheck>(name)
+                          .Services;
+        }
+
+        /// <summary>
+        /// Add PriorityFlow health check with custom configuration
+        /// </summary>
+        public static IServiceCollection AddPriorityFlowHealthCheck(
+            this IServiceCollection services, 
+            string name,
+            HealthStatus? failureStatus = null,
+            IEnumerable<string>? tags = null,
+            TimeSpan? timeout = null)
+        {
+            return services.AddHealthChecks()
+                          .AddCheck<PriorityQueueHealthCheck>(
+                              name, 
+                              failureStatus, 
+                              tags, 
+                              timeout)
+                          .Services;
+        }
+
+        /// <summary>
+        /// Add PriorityFlow observability services (metrics and health checks)
+        /// </summary>
+        public static IServiceCollection AddPriorityFlowObservability(this IServiceCollection services)
+        {
+            services.AddSingleton<IPriorityFlowMetrics, PriorityFlowMetrics>();
+            services.AddPriorityFlowHealthCheck();
+            return services;
+        }
     }
 
     /// <summary>
@@ -200,16 +334,7 @@ namespace PriorityFlow.Extensions
             return services;
         }
 
-        /// <summary>
-        /// Add pipeline behaviors (similar to MediatR)
-        /// </summary>
-        public static IServiceCollection AddPriorityFlowBehavior<TBehavior>(this IServiceCollection services)
-            where TBehavior : class
-        {
-            // This would be implemented if pipeline behaviors are needed
-            // For now, it's a placeholder for future enhancement
-            services.AddTransient<TBehavior>();
-            return services;
-        }
+
     }
+
 }

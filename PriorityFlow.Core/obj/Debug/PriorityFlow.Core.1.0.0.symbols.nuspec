@@ -55,10 +55,6 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.dll" target="lib\net8.0\PriorityFlow.Core.dll" />
-    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.xml" target="lib\net8.0\PriorityFlow.Core.xml" />
-    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\README.md" target="\README.md" />
-    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\LICENSE" target="\LICENSE" />
-    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\CHANGELOG.md" target="\CHANGELOG.md" />
+    <file src="C:\Users\Ufuk\Desktop\PriorityFlowDemo\PriorityFlow.Core\bin\Debug\net8.0\PriorityFlow.Core.pdb" target="lib\net8.0\PriorityFlow.Core.pdb" />
   </files>
 </package>

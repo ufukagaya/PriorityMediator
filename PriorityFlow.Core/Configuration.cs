@@ -17,6 +17,48 @@ namespace PriorityFlow
         public bool AutoDetectPriorities { get; set; } = true;
         public bool LearnFromUsage { get; set; } = false;
 
+        // New properties for enhanced features
+        
+        /// <summary>
+        /// Enable background queue processing instead of immediate execution
+        /// </summary>
+        public bool EnableQueuedProcessing { get; set; } = false;
+
+        /// <summary>
+        /// Maximum capacity for the priority queue (null for unbounded)
+        /// </summary>
+        public int? MaxQueueCapacity { get; set; } = null;
+
+        /// <summary>
+        /// Queue length threshold for health checks and alerts
+        /// </summary>
+        public long QueueLengthThreshold { get; set; } = 1000;
+
+        /// <summary>
+        /// Enable automatic request validation using FluentValidation
+        /// </summary>
+        public bool EnableValidation { get; set; } = false;
+
+        /// <summary>
+        /// Enable observability metrics collection
+        /// </summary>
+        public bool EnableMetrics { get; set; } = true;
+
+        /// <summary>
+        /// Enable health checks for monitoring integration
+        /// </summary>
+        public bool EnableHealthChecks { get; set; } = false;
+
+        /// <summary>
+        /// Maximum error rate percentage before marking system as unhealthy
+        /// </summary>
+        public double MaxErrorRateThreshold { get; set; } = 5.0;
+
+        /// <summary>
+        /// Maximum average wait time in milliseconds before marking system as unhealthy
+        /// </summary>
+        public double MaxAverageWaitTimeThreshold { get; set; } = 5000.0;
+
         internal Dictionary<string, Priority> CustomConventions { get; set; } = new();
     }
 
@@ -77,6 +119,51 @@ namespace PriorityFlow
         public PriorityFlowConfigurationBuilder WithUsageLearning(bool enabled = true)
         {
             _configuration.LearnFromUsage = enabled;
+            return this;
+        }
+
+        /// <summary>
+        /// Enable background queue processing for priority-based execution
+        /// </summary>
+        public PriorityFlowConfigurationBuilder WithQueuing(bool enabled = true, int? maxCapacity = null)
+        {
+            _configuration.EnableQueuedProcessing = enabled;
+            _configuration.MaxQueueCapacity = maxCapacity;
+            return this;
+        }
+
+        /// <summary>
+        /// Configure validation behavior
+        /// </summary>
+        public PriorityFlowConfigurationBuilder WithValidation(bool enabled = true)
+        {
+            _configuration.EnableValidation = enabled;
+            return this;
+        }
+
+        /// <summary>
+        /// Configure observability and metrics collection
+        /// </summary>
+        public PriorityFlowConfigurationBuilder WithObservability(Action<ObservabilityConfigurationBuilder>? configure = null)
+        {
+            _configuration.EnableMetrics = true;
+            
+            if (configure != null)
+            {
+                var builder = new ObservabilityConfigurationBuilder(_configuration);
+                configure(builder);
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Enable health checks for monitoring integration
+        /// </summary>
+        public PriorityFlowConfigurationBuilder WithHealthChecks(bool enabled = true, long queueLengthThreshold = 1000)
+        {
+            _configuration.EnableHealthChecks = enabled;
+            _configuration.QueueLengthThreshold = queueLengthThreshold;
             return this;
         }
 
@@ -199,6 +286,63 @@ namespace PriorityFlow
         public ConventionConfigurationBuilder ClearCustomConventions()
         {
             _configuration.CustomConventions.Clear();
+            return this;
+        }
+    }
+
+    /// <summary>
+    /// Observability configuration builder for metrics and monitoring
+    /// </summary>
+    public class ObservabilityConfigurationBuilder
+    {
+        private readonly PriorityFlowConfiguration _configuration;
+
+        internal ObservabilityConfigurationBuilder(PriorityFlowConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        /// <summary>
+        /// Enable metrics collection
+        /// </summary>
+        public ObservabilityConfigurationBuilder EnableMetrics(bool enabled = true)
+        {
+            _configuration.EnableMetrics = enabled;
+            return this;
+        }
+
+        /// <summary>
+        /// Enable health checks
+        /// </summary>
+        public ObservabilityConfigurationBuilder EnableHealthChecks(bool enabled = true)
+        {
+            _configuration.EnableHealthChecks = enabled;
+            return this;
+        }
+
+        /// <summary>
+        /// Configure health check thresholds
+        /// </summary>
+        public ObservabilityConfigurationBuilder WithHealthThresholds(
+            long queueLengthThreshold = 1000,
+            double maxErrorRate = 5.0,
+            double maxAverageWaitTime = 5000.0)
+        {
+            _configuration.QueueLengthThreshold = queueLengthThreshold;
+            _configuration.MaxErrorRateThreshold = maxErrorRate;
+            _configuration.MaxAverageWaitTimeThreshold = maxAverageWaitTime;
+            return this;
+        }
+
+        /// <summary>
+        /// Enable all observability features
+        /// </summary>
+        public ObservabilityConfigurationBuilder EnableAll()
+        {
+            _configuration.EnableMetrics = true;
+            _configuration.EnableHealthChecks = true;
+            _configuration.EnablePerformanceTracking = true;
+            _configuration.EnablePerformanceAlerts = true;
             return this;
         }
     }

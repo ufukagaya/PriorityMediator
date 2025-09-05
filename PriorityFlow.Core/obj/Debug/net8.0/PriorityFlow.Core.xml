@@ -1,0 +1,1333 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PriorityFlow.Core</name>
+    </assembly>
+    <members>
+        <member name="T:PriorityFlow.BuiltinBehaviors.LoggingBehavior`2">
+            <summary>
+            Logging pipeline behavior - logs all command executions
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.BuiltinBehaviors.PerformanceMonitoringBehavior`2">
+            <summary>
+            Performance monitoring behavior - tracks execution times and alerts on slow commands
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.BuiltinBehaviors.ValidationBehavior`2">
+            <summary>
+            Validation behavior - validates requests before processing
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.BuiltinBehaviors.RetryBehavior`2">
+            <summary>
+            Retry behavior - retries failed commands based on configuration
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.BuiltinBehaviors.CachingBehavior`2">
+            <summary>
+            Priority-aware caching behavior - caches responses based on priority and configuration
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.IPipelineBehavior`1">
+            <summary>
+            Pipeline behavior for requests without response - compatible with MediatR
+            Use for cross-cutting concerns like logging, validation, caching, etc.
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.IPipelineBehavior`1.Handle(`0,PriorityFlow.RequestHandlerDelegate,System.Threading.CancellationToken)">
+            <summary>
+            Handle pipeline behavior
+            </summary>
+            <param name="request">Request instance</param>
+            <param name="next">Next behavior in pipeline</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.IPipelineBehavior`2">
+            <summary>
+            Pipeline behavior for requests with response - compatible with MediatR
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.IPipelineBehavior`2.Handle(`0,PriorityFlow.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <summary>
+            Handle pipeline behavior
+            </summary>
+            <param name="request">Request instance</param>
+            <param name="next">Next behavior in pipeline</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.IGenericPipelineBehavior`2">
+            <summary>
+            Generic pipeline behavior that applies to all requests
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`1">
+            <summary>
+            Pipeline behavior that monitors request execution performance
+            Logs warnings when requests exceed configured time thresholds
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`1.Handle(`0,PriorityFlow.RequestHandlerDelegate,System.Threading.CancellationToken)">
+            <summary>
+            Handle performance monitoring for requests without response
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`1.LogPerformanceMetrics(System.String,System.Guid,System.Int64,System.DateTime,System.DateTime,System.Exception)">
+            <summary>
+            Log performance metrics and warnings
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`1.RecordPerformanceMetrics(System.String,PriorityFlow.Priority,System.Int64,System.String,System.DateTime)">
+            <summary>
+            Record performance metrics for monitoring systems
+            This method can be extended to integrate with application metrics systems
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`2">
+            <summary>
+            Pipeline behavior that monitors performance for requests with response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`2.Handle(`0,PriorityFlow.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <summary>
+            Handle performance monitoring for requests with response
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`2.LogPerformanceMetrics(System.String,System.String,System.Guid,System.Int64,System.DateTime,System.DateTime,System.Exception,`1)">
+            <summary>
+            Log performance metrics and warnings with response information
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.PerformanceMonitoringBehavior`2.RecordPerformanceMetrics(System.String,System.String,PriorityFlow.Priority,System.Int64,System.String,System.DateTime,System.Boolean)">
+            <summary>
+            Record performance metrics for monitoring systems with response information
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.ValidationBehavior`1">
+            <summary>
+            Pipeline behavior that validates requests using FluentValidation
+            Automatically resolves and executes all registered validators for the request type
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.ValidationBehavior`1.Handle(`0,PriorityFlow.RequestHandlerDelegate,System.Threading.CancellationToken)">
+            <summary>
+            Handle validation for requests without response
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.ValidationBehavior`1.ValidateRequest(`0,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Performs the actual validation logic
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.ValidationBehavior`2">
+            <summary>
+            Pipeline behavior that validates requests with response using FluentValidation
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.ValidationBehavior`2.Handle(`0,PriorityFlow.RequestHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <summary>
+            Handle validation for requests with response
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.ValidationBehavior`2.ValidateRequest(`0,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Performs the actual validation logic
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Behaviors.GenericValidationBehavior">
+            <summary>
+            Generic validation behavior that works with any request type through reflection
+            Useful when you want to register a single behavior for all request types
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Behaviors.GenericValidationBehavior.Handle(System.Object,PriorityFlow.RequestHandlerDelegate{System.Object},System.Threading.CancellationToken)">
+            <summary>
+            Handle validation for any request type using reflection
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PriorityFlowConfiguration">
+            <summary>
+            Configuration options for PriorityFlow
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.EnableQueuedProcessing">
+            <summary>
+            Enable background queue processing instead of immediate execution
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.MaxQueueCapacity">
+            <summary>
+            Maximum capacity for the priority queue (null for unbounded)
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.QueueLengthThreshold">
+            <summary>
+            Queue length threshold for health checks and alerts
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.EnableValidation">
+            <summary>
+            Enable automatic request validation using FluentValidation
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.EnableMetrics">
+            <summary>
+            Enable observability metrics collection
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.EnableHealthChecks">
+            <summary>
+            Enable health checks for monitoring integration
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.MaxErrorRateThreshold">
+            <summary>
+            Maximum error rate percentage before marking system as unhealthy
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.PriorityFlowConfiguration.MaxAverageWaitTimeThreshold">
+            <summary>
+            Maximum average wait time in milliseconds before marking system as unhealthy
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PriorityFlowConfigurationBuilder">
+            <summary>
+            Fluent configuration builder for PriorityFlow
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithDebugLogging(System.Boolean)">
+            <summary>
+            Enable or disable debug logging
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithPerformanceMonitoring(System.Action{PriorityFlow.PerformanceConfigurationBuilder})">
+            <summary>
+            Configure performance monitoring
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithConventions(System.Action{PriorityFlow.ConventionConfigurationBuilder})">
+            <summary>
+            Configure priority conventions
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithAutoDetection(System.Boolean)">
+            <summary>
+            Enable auto-detection of priorities based on naming patterns
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithUsageLearning(System.Boolean)">
+            <summary>
+            Enable learning from usage patterns (experimental)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithQueuing(System.Boolean,System.Nullable{System.Int32})">
+            <summary>
+            Enable background queue processing for priority-based execution
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithValidation(System.Boolean)">
+            <summary>
+            Configure validation behavior
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithObservability(System.Action{PriorityFlow.ObservabilityConfigurationBuilder})">
+            <summary>
+            Configure observability and metrics collection
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.WithHealthChecks(System.Boolean,System.Int64)">
+            <summary>
+            Enable health checks for monitoring integration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityFlowConfigurationBuilder.Build">
+            <summary>
+            Build the configuration
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PerformanceConfigurationBuilder">
+            <summary>
+            Performance configuration builder
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PerformanceConfigurationBuilder.EnableAlerts(System.Int64)">
+            <summary>
+            Enable performance alerts when commands are slow
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PerformanceConfigurationBuilder.DisableAlerts">
+            <summary>
+            Disable performance alerts
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PerformanceConfigurationBuilder.TrackAllCommands">
+            <summary>
+            Track all command executions
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.ConventionConfigurationBuilder">
+            <summary>
+            Convention configuration builder
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ConventionConfigurationBuilder.HighPriority(System.String[])">
+            <summary>
+            Add keywords that should be treated as High priority
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ConventionConfigurationBuilder.NormalPriority(System.String[])">
+            <summary>
+            Add keywords that should be treated as Normal priority
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ConventionConfigurationBuilder.LowPriority(System.String[])">
+            <summary>
+            Add keywords that should be treated as Low priority
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ConventionConfigurationBuilder.CustomPriority(System.String,PriorityFlow.Priority)">
+            <summary>
+            Add custom priority mapping
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ConventionConfigurationBuilder.ClearCustomConventions">
+            <summary>
+            Clear all custom conventions
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.ObservabilityConfigurationBuilder">
+            <summary>
+            Observability configuration builder for metrics and monitoring
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ObservabilityConfigurationBuilder.EnableMetrics(System.Boolean)">
+            <summary>
+            Enable metrics collection
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ObservabilityConfigurationBuilder.EnableHealthChecks(System.Boolean)">
+            <summary>
+            Enable health checks
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ObservabilityConfigurationBuilder.WithHealthThresholds(System.Int64,System.Double,System.Double)">
+            <summary>
+            Configure health check thresholds
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ObservabilityConfigurationBuilder.EnableAll">
+            <summary>
+            Enable all observability features
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.DebugConfigurationBuilder">
+            <summary>
+            Debug configuration builder for development scenarios
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.DebugConfigurationBuilder.EnableConsoleLogging">
+            <summary>
+            Enable console logging for command execution
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.DebugConfigurationBuilder.ShowExecutionOrder">
+            <summary>
+            Show execution order in logs
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.DebugConfigurationBuilder.TrackPerformance">
+            <summary>
+            Track performance metrics
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.EnhancedPriorityMediator">
+            <summary>
+            Enhanced Priority Mediator with Pipeline Behaviors support
+            Full MediatR compatibility + Priority intelligence + Enterprise features
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Unit">
+            <summary>
+            Unit type for void operations (MediatR compatibility)
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.IRequest">
+            <summary>
+            Marker interface to represent a request (command without response)
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.IRequest`1">
+            <summary>
+            Marker interface to represent a request with a response
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IRequestHandler`1">
+            <summary>
+            Handler for a request without response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IRequestHandler`2">
+            <summary>
+            Handler for a request with response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.INotification">
+            <summary>
+            Notification (event) interface
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.INotificationHandler`1">
+            <summary>
+            Handler for notifications
+            </summary>
+            <typeparam name="TNotification">Notification type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IStreamRequest`1">
+            <summary>
+            Stream request interface
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IStreamRequestHandler`2">
+            <summary>
+            Stream handler interface
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IPipelineBehavior`1">
+            <summary>
+            Pipeline behavior for requests without response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IPipelineBehavior`2">
+            <summary>
+            Pipeline behavior for requests with response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.IStreamPipelineBehavior`2">
+            <summary>
+            Stream pipeline behavior
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.RequestHandlerDelegate">
+            <summary>
+            Delegate representing the continuation of the request handling pipeline
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.RequestHandlerDelegate`1">
+            <summary>
+            Delegate representing the continuation of the request handling pipeline with response  
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.StreamHandlerDelegate`1">
+            <summary>
+            Delegate representing the continuation of the stream handling pipeline
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.ISender">
+            <summary>
+            Main interface for sending commands/queries - equivalent to MediatR's IMediator
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.ISender.Send``1(``0,System.Threading.CancellationToken)">
+            <summary>
+            Send a request without response
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <param name="request">Request instance</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.ISender.Send``1(PriorityFlow.IRequest{``0},System.Threading.CancellationToken)">
+            <summary>
+            Send a request with response
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+            <param name="request">Request instance</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.ISender.Send(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Send a request (object-based, for advanced scenarios)
+            </summary>
+            <param name="request">Request instance</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.ISender.CreateStream``1(PriorityFlow.IStreamRequest{``0},System.Threading.CancellationToken)">
+            <summary>
+            Create a stream for handling stream requests
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+            <param name="request">Stream request</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.ISender.CreateStream(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Create a stream (object-based, for advanced scenarios)
+            </summary>
+            <param name="request">Stream request</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="T:PriorityFlow.IPublisher">
+            <summary>
+            Interface for publishing notifications/events
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.IPublisher.Publish``1(``0,System.Threading.CancellationToken)">
+            <summary>
+            Publish a notification to all handlers
+            </summary>
+            <typeparam name="TNotification">Notification type</typeparam>
+            <param name="notification">Notification instance</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.IPublisher.Publish(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Publish a notification (object-based)
+            </summary>
+            <param name="notification">Notification instance</param>
+            <param name="cancellationToken">Cancellation token</param>
+        </member>
+        <member name="T:PriorityFlow.IMediator">
+            <summary>
+            Combined interface for sending commands and publishing events
+            Equivalent to MediatR's IMediator interface
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Observability.IPriorityFlowMetrics">
+            <summary>
+            Interface for collecting and exposing PriorityFlow runtime metrics
+            Provides thread-safe metric collection for monitoring and diagnostics
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.IncrementQueuedItems">
+            <summary>
+            Increment the count of items added to the queue
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.DecrementQueuedItems">
+            <summary>
+            Decrement the count of items removed from the queue
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetCurrentQueueLength">
+            <summary>
+            Get the current number of items waiting in the queue
+            </summary>
+            <returns>Current queue length</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetTotalEnqueuedItems">
+            <summary>
+            Get the total number of items that have been enqueued since startup
+            </summary>
+            <returns>Total enqueued items</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetTotalProcessedItems">
+            <summary>
+            Get the total number of items that have been processed since startup
+            </summary>
+            <returns>Total processed items</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetQueueLengthByPriority">
+            <summary>
+            Get the current queue length by priority level
+            </summary>
+            <returns>Dictionary with priority as key and count as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.RecordProcessingTime(PriorityFlow.Priority,System.Double)">
+            <summary>
+            Record the processing time for a request
+            </summary>
+            <param name="priority">Priority level of the request</param>
+            <param name="milliseconds">Processing time in milliseconds</param>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetAverageProcessingTime">
+            <summary>
+            Get the average processing time for all priorities
+            </summary>
+            <returns>Average processing time in milliseconds</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetAverageProcessingTimeByPriority">
+            <summary>
+            Get the average processing time by priority level
+            </summary>
+            <returns>Dictionary with priority as key and average time as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetMaxProcessingTimeByPriority">
+            <summary>
+            Get the maximum processing time recorded for each priority
+            </summary>
+            <returns>Dictionary with priority as key and max time as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetMinProcessingTimeByPriority">
+            <summary>
+            Get the minimum processing time recorded for each priority
+            </summary>
+            <returns>Dictionary with priority as key and min time as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.RecordError(PriorityFlow.Priority,System.String)">
+            <summary>
+            Record a processing error
+            </summary>
+            <param name="priority">Priority level of the failed request</param>
+            <param name="errorType">Type of error (exception type name)</param>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetTotalErrors">
+            <summary>
+            Get the total number of errors since startup
+            </summary>
+            <returns>Total error count</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetErrorsByPriority">
+            <summary>
+            Get the total number of errors by priority level
+            </summary>
+            <returns>Dictionary with priority as key and error count as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetErrorsByType">
+            <summary>
+            Get the most common error types and their counts
+            </summary>
+            <returns>Dictionary with error type as key and count as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetErrorRate">
+            <summary>
+            Get the error rate (errors per total processed items) as a percentage
+            </summary>
+            <returns>Error rate percentage</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetCurrentThroughput">
+            <summary>
+            Get the current throughput (items processed per second)
+            Based on a rolling window of recent activity
+            </summary>
+            <returns>Items processed per second</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetPeakThroughput">
+            <summary>
+            Get the peak throughput recorded
+            </summary>
+            <returns>Peak items processed per second</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetThroughputByPriority">
+            <summary>
+            Get throughput by priority level
+            </summary>
+            <returns>Dictionary with priority as key and throughput as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.RecordWaitTime(PriorityFlow.Priority,System.Double)">
+            <summary>
+            Record how long a request waited in the queue before processing
+            </summary>
+            <param name="priority">Priority level of the request</param>
+            <param name="waitTimeMilliseconds">Wait time in milliseconds</param>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetAverageWaitTime">
+            <summary>
+            Get the average wait time for all priorities
+            </summary>
+            <returns>Average wait time in milliseconds</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetAverageWaitTimeByPriority">
+            <summary>
+            Get the average wait time by priority level
+            </summary>
+            <returns>Dictionary with priority as key and average wait time as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetMaxWaitTimeByPriority">
+            <summary>
+            Get the maximum wait time recorded by priority
+            </summary>
+            <returns>Dictionary with priority as key and max wait time as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.RecordSystemStart">
+            <summary>
+            Record when the system started
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetUptime">
+            <summary>
+            Get the system uptime
+            </summary>
+            <returns>System uptime timespan</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetLastActivityTime">
+            <summary>
+            Get the last activity timestamp
+            </summary>
+            <returns>DateTime of last processed request</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.IsHealthy(System.Int64,System.Double,System.Double)">
+            <summary>
+            Check if the system is considered healthy based on configurable criteria
+            </summary>
+            <param name="maxQueueLength">Maximum acceptable queue length</param>
+            <param name="maxErrorRate">Maximum acceptable error rate percentage</param>
+            <param name="maxAverageWaitTime">Maximum acceptable average wait time in milliseconds</param>
+            <returns>True if system is healthy, false otherwise</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.Reset">
+            <summary>
+            Reset all metrics to their initial state
+            Useful for testing or system restart scenarios
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetSnapshot">
+            <summary>
+            Get a snapshot of all current metrics
+            </summary>
+            <returns>Dictionary containing all metric values</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.IPriorityFlowMetrics.GetMetricsSnapshot">
+            <summary>
+            Export metrics in a structured format for monitoring systems
+            </summary>
+            <returns>Structured metrics data</returns>
+        </member>
+        <member name="T:PriorityFlow.Observability.PriorityFlowMetricsSnapshot">
+            <summary>
+            Structured snapshot of all PriorityFlow metrics at a point in time
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityFlowMetricsSnapshot.GetSummary">
+            <summary>
+            Get a human-readable summary of the metrics
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Observability.PriorityFlowMetrics">
+            <summary>
+            Thread-safe implementation of PriorityFlow metrics collection
+            Uses atomic operations and concurrent collections for high-performance metric recording
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Observability.PriorityQueueHealthCheck">
+            <summary>
+            Health check implementation for PriorityFlow queue monitoring
+            Integrates with ASP.NET Core Health Checks to monitor queue health
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityQueueHealthCheck.CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext,System.Threading.CancellationToken)">
+            <summary>
+            Performs the health check evaluation
+            </summary>
+            <param name="context">Health check context</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Health check result</returns>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityQueueHealthCheck.EvaluateHealthAsync(PriorityFlow.Observability.PriorityFlowMetricsSnapshot,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>
+            Evaluates the health status based on metrics and configuration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityQueueHealthCheck.CheckPriorityImbalanceAsync(PriorityFlow.Observability.PriorityFlowMetricsSnapshot,System.Collections.Generic.List{System.String},System.Collections.Generic.List{System.String},System.Threading.CancellationToken)">
+            <summary>
+            Check for priority imbalance issues
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityQueueHealthCheck.FormatProcessingTimes(System.Collections.Generic.Dictionary{PriorityFlow.Priority,System.Double})">
+            <summary>
+            Format processing times for health check response
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Observability.PriorityQueueHealthCheck.FormatThroughput(System.Collections.Generic.Dictionary{PriorityFlow.Priority,System.Double})">
+            <summary>
+            Format throughput for health check response
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Priority">
+            <summary>
+            Simple 3-level priority system optimized for developer experience
+            Higher number = Higher priority
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PriorityAttribute">
+            <summary>
+            Attribute for explicitly setting command priority
+            Usage: [Priority(Priority.High)]
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PriorityConventions">
+            <summary>
+            Smart convention-based priority detection with learning capabilities
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.GetConventionBasedPriority(System.Type)">
+            <summary>
+            Get priority for a command type using conventions
+            </summary>
+            <param name="commandType">Command type</param>
+            <returns>Detected priority or Normal if no match</returns>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.AddCustomConvention(System.String,PriorityFlow.Priority)">
+            <summary>
+            Add custom naming convention
+            </summary>
+            <param name="keyword">Keyword to match in command name</param>
+            <param name="priority">Priority to assign</param>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.AddCustomConventions(System.Collections.Generic.Dictionary{System.String,PriorityFlow.Priority})">
+            <summary>
+            Add multiple custom conventions at once
+            </summary>
+            <param name="conventions">Dictionary of keyword-priority mappings</param>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.GetNamespaceBasedPriority(System.String)">
+            <summary>
+            Get namespace-based priority hints
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.TrackUsage(System.String,PriorityFlow.Priority)">
+            <summary>
+            Track command usage for learning (optional)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.GetUsageStatistics">
+            <summary>
+            Get usage statistics (for debugging/monitoring)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.ClearCustomConventions">
+            <summary>
+            Clear custom conventions (useful for testing)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.PriorityConventions.GetAllConventions">
+            <summary>
+            Get all active conventions (built-in + custom)
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.PriorityCommandItem">
+            <summary>
+            Internal class for priority queue management
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.QueuedPriorityMediator">
+            <summary>
+            Priority-aware mediator that enqueues requests for asynchronous background processing
+            Maintains API compatibility with MediatR while providing true priority-based execution
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.Send``1(``0,System.Threading.CancellationToken)">
+            <summary>
+            Send a request without response - enqueues for priority-based processing
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.Send``1(PriorityFlow.IRequest{``0},System.Threading.CancellationToken)">
+            <summary>
+            Send a request with response - enqueues for priority-based processing and returns result
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.Send(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Send a request (object-based) - for advanced scenarios with reflection
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.Publish``1(``0,System.Threading.CancellationToken)">
+            <summary>
+            Publish notification - processed directly (notifications are typically fire-and-forget)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.Publish(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Publish notification (object-based) - processed directly
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.CreateStream``1(PriorityFlow.IStreamRequest{``0},System.Threading.CancellationToken)">
+            <summary>
+            Create stream - processed directly (streams need real-time processing)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.CreateStream(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Create stream (object-based) - simplified implementation
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.GetNotificationHandlers``1">
+            <summary>
+            Get notification handlers for strongly-typed notifications (using fake service resolution for demo)
+            In real implementation, this would resolve from IServiceProvider
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.GetNotificationHandlers(System.Type)">
+            <summary>
+            Get notification handlers for object-based notifications (using fake service resolution for demo)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.GetStreamHandler``2">
+            <summary>
+            Get stream handler (using fake service resolution for demo)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.GetQueueLength">
+            <summary>
+            Get current queue length (for monitoring and diagnostics)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.GetQueueDistribution">
+            <summary>
+            Get queue distribution by priority (for monitoring and diagnostics)
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.QueuedPriorityMediator.IsQueueAcceptingRequests">
+            <summary>
+            Check if queue is accepting new requests
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Queuing.IPriorityQueueChannel">
+            <summary>
+            Interface for priority-based request queuing operations
+            Provides thread-safe enqueueing and async consumption of priority requests
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.IPriorityQueueChannel.TryAdd(PriorityFlow.Queuing.PriorityRequest)">
+            <summary>
+            Attempts to add a request to the priority queue
+            </summary>
+            <param name="request">The priority request to enqueue</param>
+            <returns>True if successfully added, false if the queue is full or closed</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.IPriorityQueueChannel.GetConsumingAsyncEnumerable(System.Threading.CancellationToken)">
+            <summary>
+            Gets an async enumerable for consuming requests in priority order
+            Higher priority requests (Priority.High = 3) are processed first
+            </summary>
+            <param name="cancellationToken">Cancellation token for stopping consumption</param>
+            <returns>Async enumerable of priority requests ordered by priority</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.IPriorityQueueChannel.GetQueueLength">
+            <summary>
+            Gets the current number of requests waiting in the queue
+            </summary>
+            <returns>Number of queued requests</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.IPriorityQueueChannel.GetQueueDistribution">
+            <summary>
+            Gets the number of requests by priority level
+            Useful for monitoring and debugging queue distribution
+            </summary>
+            <returns>Dictionary with priority as key and count as value</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.IPriorityQueueChannel.CompleteAdding">
+            <summary>
+            Marks the queue as complete for adding new requests
+            Existing requests will continue to be processed
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.IPriorityQueueChannel.IsAddingCompleted">
+            <summary>
+            Gets whether the queue is accepting new requests
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.IPriorityQueueChannel.MaxCapacity">
+            <summary>
+            Gets the maximum capacity of the queue (if configured)
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Queuing.PriorityQueueChannel">
+            <summary>
+            Thread-safe priority queue implementation using System.Threading.Channels
+            Maintains separate queues for each priority level and merges them during consumption
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.#ctor(Microsoft.Extensions.Logging.ILogger{PriorityFlow.Queuing.PriorityQueueChannel})">
+            <summary>
+            Creates a new priority queue channel with default unbounded capacity
+            </summary>
+            <param name="logger">Optional logger for diagnostics</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.#ctor(System.Nullable{System.Int32},Microsoft.Extensions.Logging.ILogger{PriorityFlow.Queuing.PriorityQueueChannel})">
+            <summary>
+            Creates a new priority queue channel with specified capacity
+            </summary>
+            <param name="maxCapacity">Maximum number of requests per priority level (null for unbounded)</param>
+            <param name="logger">Optional logger for diagnostics</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.TryAdd(PriorityFlow.Queuing.PriorityRequest)">
+            <inheritdoc />
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.GetConsumingAsyncEnumerable(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.GetNextRequestAsync(System.Threading.CancellationToken)">
+            <summary>
+            Gets the next request respecting priority order
+            High priority items are always processed first, then normal, then low
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.GetQueueLength">
+            <inheritdoc />
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.GetQueueDistribution">
+            <inheritdoc />
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.CompleteAdding">
+            <inheritdoc />
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.IsAddingCompleted">
+            <inheritdoc />
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityQueueChannel.MaxCapacity">
+            <inheritdoc />
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityQueueChannel.Dispose">
+            <summary>
+            Dispose resources and complete all channels
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Queuing.PriorityRequest">
+            <summary>
+            Wrapper for requests in the priority queue
+            Contains the request, priority metadata, and completion source for async results
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.Request">
+            <summary>
+            The original IRequest object to be processed
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.Priority">
+            <summary>
+            The priority level determined for this request
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.CompletionSource">
+            <summary>
+            Task completion source for returning results to the caller
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.CancellationToken">
+            <summary>
+            Cancellation token associated with the original request
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.EnqueuedAt">
+            <summary>
+            Timestamp when the request was enqueued
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.RequestId">
+            <summary>
+            Unique identifier for tracking and debugging
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.RequestTypeName">
+            <summary>
+            Type name of the original request for logging and debugging
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Queuing.PriorityRequest.WaitTime">
+            <summary>
+            How long the request has been waiting in the queue
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.Create(System.Object,PriorityFlow.Priority,System.Threading.CancellationToken)">
+            <summary>
+            Creates a new PriorityRequest for requests without response
+            </summary>
+            <param name="request">The IRequest to wrap</param>
+            <param name="priority">Priority level for processing</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Configured PriorityRequest</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.Create``1(PriorityFlow.IRequest{``0},PriorityFlow.Priority,System.Threading.CancellationToken)">
+            <summary>
+            Creates a new PriorityRequest for requests with response
+            </summary>
+            <typeparam name="TResponse">Expected response type</typeparam>
+            <param name="request">The IRequest&lt;TResponse&gt; to wrap</param>
+            <param name="priority">Priority level for processing</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Configured PriorityRequest</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.SetResult(System.Object)">
+            <summary>
+            Sets the result for successful completion
+            </summary>
+            <param name="result">The result to set</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.SetException(System.Exception)">
+            <summary>
+            Sets an exception for failed completion
+            </summary>
+            <param name="exception">The exception that occurred</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.SetCanceled">
+            <summary>
+            Sets cancellation for cancelled completion
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.GetTask">
+            <summary>
+            Gets the awaitable task for the request result
+            </summary>
+            <returns>Task that completes when the request is processed</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.GetResult``1">
+            <summary>
+            Gets the typed result for requests with response
+            </summary>
+            <typeparam name="TResponse">Expected response type</typeparam>
+            <returns>Typed task result</returns>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequest.ToString">
+            <summary>
+            String representation for debugging and logging
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Queuing.PriorityRequestWorker">
+            <summary>
+            Background service that processes priority requests from the queue
+            Creates new DI scopes for each request and handles both void and response requests
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            Main execution loop - consumes requests from priority queue and processes them
+            </summary>
+            <param name="stoppingToken">Cancellation token for graceful shutdown</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.ProcessPriorityRequestAsync(PriorityFlow.Queuing.PriorityRequest,System.Threading.CancellationToken)">
+            <summary>
+            Processes a single priority request within a new dependency injection scope
+            </summary>
+            <param name="priorityRequest">The request to process</param>
+            <param name="workerStoppingToken">Worker cancellation token</param>
+        </member>
+        <member name="M:PriorityFlow.Queuing.PriorityRequestWorker.StopAsync(System.Threading.CancellationToken)">
+            <summary>
+            Called when the service is stopping - allows graceful shutdown
+            </summary>
+            <param name="cancellationToken">Shutdown cancellation token</param>
+        </member>
+        <member name="T:PriorityFlow.Extensions.ServiceCollectionExtensions">
+            <summary>
+            Service collection extensions for PriorityFlow registration
+            Drop-in replacement for MediatR registration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlow(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly)">
+            <summary>
+            Add PriorityFlow with default configuration
+            Usage: services.AddPriorityFlow(Assembly.GetExecutingAssembly());
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlow(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly,System.Action{PriorityFlow.PriorityFlowConfigurationBuilder})">
+            <summary>
+            Add PriorityFlow with custom configuration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlow``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{PriorityFlow.PriorityFlowConfigurationBuilder})">
+            <summary>
+            Add PriorityFlow using a type from the target assembly
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlow(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{PriorityFlow.PriorityFlowConfigurationBuilder})">
+            <summary>
+            Add PriorityFlow using calling assembly
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlow(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly[],System.Action{PriorityFlow.PriorityFlowConfigurationBuilder})">
+            <summary>
+            Add PriorityFlow for multiple assemblies
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlowForDevelopment(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly)">
+            <summary>
+            Developer-friendly setup for quick prototyping
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlowForProduction(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly)">
+            <summary>
+            Production-ready setup with minimal logging
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.RegisterHandlers(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly)">
+            <summary>
+            Register all handlers from assembly using reflection
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.RegisterBehaviors(Microsoft.Extensions.DependencyInjection.IServiceCollection,PriorityFlow.PriorityFlowConfiguration)">
+            <summary>
+            Register pipeline behaviors based on configuration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddValidationBehavior(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add validation behavior to the pipeline
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPerformanceMonitoringBehavior(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add performance monitoring behavior to the pipeline
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlowHealthCheck(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String)">
+            <summary>
+            Add PriorityFlow health check for monitoring integration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlowHealthCheck(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,System.Nullable{Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus},System.Collections.Generic.IEnumerable{System.String},System.Nullable{System.TimeSpan})">
+            <summary>
+            Add PriorityFlow health check with custom configuration
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.ServiceCollectionExtensions.AddPriorityFlowObservability(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add PriorityFlow observability services (metrics and health checks)
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Extensions.PriorityFlowAdvancedExtensions">
+            <summary>
+            Additional extension methods for advanced scenarios
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Extensions.PriorityFlowAdvancedExtensions.AddPriorityFlowWithCustomMediator``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Reflection.Assembly)">
+            <summary>
+            Add PriorityFlow with custom mediator implementation
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.SimplePriorityMediator">
+            <summary>
+            Simplified Priority Mediator - focuses on core functionality
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.IPriorityStreamRequest`1">
+            <summary>
+            Priority-aware stream request interface
+            </summary>
+            <typeparam name="TResponse">Stream item type</typeparam>
+        </member>
+        <member name="P:PriorityFlow.Streaming.IPriorityStreamRequest`1.StreamPriority">
+            <summary>
+            Stream priority level
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Streaming.IPriorityStreamRequest`1.MaxItems">
+            <summary>
+            Maximum items to stream (0 = unlimited)
+            </summary>
+        </member>
+        <member name="P:PriorityFlow.Streaming.IPriorityStreamRequest`1.BatchSize">
+            <summary>
+            Batch size for streaming
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.IPriorityStreamRequestHandler`2">
+            <summary>
+            Enhanced stream handler with priority and batching support
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Streaming.IPriorityStreamRequestHandler`2.Handle(`0,System.Threading.CancellationToken)">
+            <summary>
+            Handle stream request with priority awareness
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.IStreamPipelineBehavior`2">
+            <summary>
+            Stream processing pipeline behavior
+            </summary>
+            <typeparam name="TRequest">Request type</typeparam>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="M:PriorityFlow.Streaming.IStreamPipelineBehavior`2.Handle(`0,PriorityFlow.Streaming.StreamHandlerDelegate{`1},System.Threading.CancellationToken)">
+            <summary>
+            Handle stream pipeline behavior
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.StreamHandlerDelegate`1">
+            <summary>
+            Stream handler delegate
+            </summary>
+            <typeparam name="TResponse">Response type</typeparam>
+        </member>
+        <member name="T:PriorityFlow.Streaming.StreamBehaviors">
+            <summary>
+            Built-in stream processing behaviors
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.StreamBehaviors.ThrottlingStreamBehavior`2">
+            <summary>
+            Throttling stream behavior - limits stream rate based on priority
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.StreamBehaviors.BufferingStreamBehavior`2">
+            <summary>
+            Buffering stream behavior - batches stream items for efficiency
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.StreamBehaviors.FilteringStreamBehavior`2">
+            <summary>
+            Filtering stream behavior - filters stream items based on criteria
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.SampleStreamRequests">
+            <summary>
+            Sample priority stream requests for common scenarios
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.SampleStreamRequests.MetricsStreamRequest">
+            <summary>
+            Real-time metrics streaming request
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Streaming.SampleStreamRequests.MetricsStreamRequest.#ctor(System.String,System.TimeSpan)">
+            <summary>
+            Real-time metrics streaming request
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.SampleStreamRequests.LogStreamRequest">
+            <summary>
+            Log streaming request
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Streaming.SampleStreamRequests.LogStreamRequest.#ctor(System.String,System.DateTime)">
+            <summary>
+            Log streaming request
+            </summary>
+        </member>
+        <member name="T:PriorityFlow.Streaming.SampleStreamRequests.AnalyticsStreamRequest">
+            <summary>
+            Analytics data streaming request
+            </summary>
+        </member>
+        <member name="M:PriorityFlow.Streaming.SampleStreamRequests.AnalyticsStreamRequest.#ctor(System.String,System.String[])">
+            <summary>
+            Analytics data streaming request
+            </summary>
+        </member>
+    </members>
+</doc>
