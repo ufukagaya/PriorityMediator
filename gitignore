@@ -1,0 +1,11 @@
+# Visual Studio/ .NET
+.vs/
+[Bb]in/
+[Oo]bj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
